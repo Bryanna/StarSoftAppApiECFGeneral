@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "363618177033",
+    "project_id": "ecf-facturacion",
+    "storage_bucket": "ecf-facturacion.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:363618177033:android:375be70e4f7201374de8d8",
+        "android_client_info": {
+          "package_name": "com.starsoft.ecffacturacion"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD0zQF-4w5L1EUsetM-vZhAZQkAyPchj9I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

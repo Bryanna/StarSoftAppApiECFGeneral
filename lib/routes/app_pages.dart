@@ -1,0 +1,55 @@
+import 'package:facturacion/screens/splash/splash_binding.dart';
+import 'package:facturacion/screens/splash/splash_screen.dart';
+import 'package:get/get.dart';
+
+import '../screens/home/home_binding.dart';
+import '../screens/home/home_screen.dart';
+import '../screens/invoice_preview/invoice_preview_screen.dart';
+import '../screens/login/login_binding.dart';
+import '../screens/login/login_screen.dart';
+import '../screens/register/register_binding.dart';
+import '../screens/register/register_screen.dart';
+import '../screens/profile/profile_controller.dart';
+import '../screens/profile/profile_screen.dart';
+import '../screens/configuracion/configuracion_binding.dart';
+import '../screens/configuracion/configuracion_screen.dart';
+import 'app_routes.dart';
+
+class AppPages {
+  static final List<GetPage> pages = [
+    GetPage(
+      name: AppRoutes.HOME,
+      page: () => const HomeScreen(),
+      binding: HomeBinding(),
+    ),
+    GetPage(
+      name: AppRoutes.INVOICE_PREVIEW,
+      page: () => const InvoicePreviewScreen(),
+    ),
+    GetPage(
+      name: AppRoutes.SPLASH,
+      page: () => const SplashScreen(),
+      binding: SplashBinding(),
+    ),
+    GetPage(
+      name: AppRoutes.LOGIN,
+      page: () => const LoginScreen(),
+      binding: LoginBinding(),
+    ),
+    GetPage(
+      name: AppRoutes.REGISTER,
+      page: () => const RegisterScreen(),
+      binding: RegisterBinding(),
+    ),
+    GetPage(
+      name: AppRoutes.PROFILE,
+      page: () => const ProfileScreen(),
+      // Perfil simple: no binding dedicado, el controlador puede inicializarse en pantalla si se requiere
+    ),
+    GetPage(
+      name: AppRoutes.CONFIGURACION,
+      page: () => const ConfiguracionScreen(),
+      binding: ConfiguracionBinding(),
+    ),
+  ];
+}
