@@ -7,13 +7,34 @@ import 'package:printing/printing.dart';
 
 import '../models/invoice.dart';
 import '../models/tipo_comprobante.dart';
+import '../services/company_config_service.dart';
 
 class InvoicePdfService {
   static Future<Uint8List> buildPdf(PdfPageFormat format, Datum inv) async {
     final doc = pw.Document();
-    final logo = await networkImage(
-      'https://upload.wikimedia.org/wikipedia/commons/1/17/Google-flutter-logo.png',
-    );
+
+    // Obtener configuración de la empresa
+    final configService = CompanyConfigService();
+    final companyConfig = await configService.getCompanyConfig();
+
+    // Usar logo configurado o logo por defecto
+    final logoUrl =
+        companyConfig?['logoUrl'] as String? ??
+        'https://upload.wikimedia.org/wikipedia/commons/1/17/Google-flutter-logo.png';
+
+    pw.ImageProvider? logo;
+    try {
+      logo = await networkImage(logoUrl);
+    } catch (e) {
+      // Si falla cargar el logo, usar uno por defecto o null
+      try {
+        logo = await networkImage(
+          'https://upload.wikimedia.org/wikipedia/commons/1/17/Google-flutter-logo.png',
+        );
+      } catch (e2) {
+        logo = null; // No mostrar logo si no se puede cargar ninguno
+      }
+    }
 
     final headerStyle = pw.TextStyle(
       fontSize: 18,
@@ -25,7 +46,10 @@ class InvoicePdfService {
       fontWeight: pw.FontWeight.bold,
       color: PdfColor.fromInt(0xFF005285),
     );
-    final labelStyle = pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold);
+    final labelStyle = pw.TextStyle(
+      fontSize: 10,
+      fontWeight: pw.FontWeight.bold,
+    );
     final valueStyle = pw.TextStyle(fontSize: 10);
 
     doc.addPage(
@@ -42,13 +66,31 @@ class InvoicePdfService {
                   pw.Container(
                     width: 120,
                     height: 60,
-                    child: pw.Image(logo, fit: pw.BoxFit.contain),
+                    child: logo != null
+                        ? pw.Image(logo, fit: pw.BoxFit.contain)
+                        : pw.Container(
+                            decoration: pw.BoxDecoration(
+                              border: pw.Border.all(color: PdfColors.grey300),
+                              borderRadius: pw.BorderRadius.circular(4),
+                            ),
+                            child: pw.Center(
+                              child: pw.Text(
+                                'LOGO',
+                                style: pw.TextStyle(
+                                  fontSize: 12,
+                                  color: PdfColors.grey600,
+                                ),
+                              ),
+                            ),
+                          ),
                   ),
                   pw.Expanded(
                     child: pw.Center(
                       child: pw.Text(
-                        'CENTRO MEDICO PREVENTIVO SALUD Y VIDA SRL',
+                        companyConfig?['razonSocial'] as String? ??
+                            'CENTRO MEDICO PREVENTIVO SALUD Y VIDA SRL',
                         style: headerStyle,
+                        textAlign: pw.TextAlign.center,
                       ),
                     ),
                   ),
@@ -57,11 +99,23 @@ class InvoicePdfService {
                     child: pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.end,
                       children: [
-                        pw.Text('FACTURA ELECTRÓNICA', style: headerStyle.copyWith(fontSize: 14)),
+                        pw.Text(
+                          'FACTURA ELECTRÓNICA',
+                          style: headerStyle.copyWith(fontSize: 14),
+                        ),
                         pw.SizedBox(height: 2),
-                        pw.Text('e-CF: ${inv.encf ?? inv.fDocumento ?? '-'}', style: pw.TextStyle(fontSize: 10)),
-                        pw.Text('Fecha Emisión: ${_fmtDateDt(inv.fechaemision)}', style: pw.TextStyle(fontSize: 10)),
-                        pw.Text('Fecha Vencimiento: ${_fmtDateDt(inv.fechavencimientosecuencia)}', style: pw.TextStyle(fontSize: 10)),
+                        pw.Text(
+                          'e-CF: ${inv.encf ?? inv.fDocumento ?? '-'}',
+                          style: pw.TextStyle(fontSize: 10),
+                        ),
+                        pw.Text(
+                          'Fecha Emisión: ${_fmtDateDt(inv.fechaemision)}',
+                          style: pw.TextStyle(fontSize: 10),
+                        ),
+                        pw.Text(
+                          'Fecha Vencimiento: ${_fmtDateDt(inv.fechavencimientosecuencia)}',
+                          style: pw.TextStyle(fontSize: 10),
+                        ),
                       ],
                     ),
                   ),
@@ -79,9 +133,18 @@ class InvoicePdfService {
                       children: [
                         pw.Text('Datos del Emisor', style: sectionTitleStyle),
                         pw.SizedBox(height: 4),
-                        pw.Text('RNC: ${inv.rncemisor ?? inv.fRncEmisor ?? '-'}', style: valueStyle),
-                        pw.Text('Nombre: ${inv.razonsocialemisor?.toString().split('.').last ?? '-'}', style: valueStyle),
-                        pw.Text('Dirección: ${inv.direccionemisor?.toString().split('.').last ?? '-'}', style: valueStyle),
+                        pw.Text(
+                          'RNC: ${inv.rncemisor ?? inv.fRncEmisor ?? '-'}',
+                          style: valueStyle,
+                        ),
+                        pw.Text(
+                          'Nombre: ${inv.razonsocialemisor?.toString().split('.').last ?? '-'}',
+                          style: valueStyle,
+                        ),
+                        pw.Text(
+                          'Dirección: ${inv.direccionemisor?.toString().split('.').last ?? '-'}',
+                          style: valueStyle,
+                        ),
                       ],
                     ),
                   ),
@@ -90,11 +153,23 @@ class InvoicePdfService {
                     child: pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
-                        pw.Text('Datos del Comprador', style: sectionTitleStyle),
+                        pw.Text(
+                          'Datos del Comprador',
+                          style: sectionTitleStyle,
+                        ),
                         pw.SizedBox(height: 4),
-                        pw.Text('RNC: ${inv.rnccomprador ?? inv.fRncReceptor ?? '-'}', style: valueStyle),
-                        pw.Text('Nombre: ${inv.razonsocialcomprador?.toString().split('.').last ?? inv.fReceptorNombre ?? '-'}', style: valueStyle),
-                        pw.Text('Dirección: ${inv.direccioncomprador ?? inv.fDireccionReceptor ?? '-'}', style: valueStyle),
+                        pw.Text(
+                          'RNC: ${inv.rnccomprador ?? inv.fRncReceptor ?? '-'}',
+                          style: valueStyle,
+                        ),
+                        pw.Text(
+                          'Nombre: ${inv.razonsocialcomprador?.toString().split('.').last ?? inv.fReceptorNombre ?? '-'}',
+                          style: valueStyle,
+                        ),
+                        pw.Text(
+                          'Dirección: ${inv.direccioncomprador ?? inv.fDireccionReceptor ?? '-'}',
+                          style: valueStyle,
+                        ),
                       ],
                     ),
                   ),
@@ -102,10 +177,16 @@ class InvoicePdfService {
               ),
 
               pw.SizedBox(height: 12),
-              pw.Text('Detalle de Productos', style: headerStyle.copyWith(fontSize: 14)),
+              pw.Text(
+                'Detalle de Productos',
+                style: headerStyle.copyWith(fontSize: 14),
+              ),
               pw.SizedBox(height: 6),
               pw.Table(
-                border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
+                border: pw.TableBorder.all(
+                  color: PdfColors.grey300,
+                  width: 0.5,
+                ),
                 columnWidths: {
                   0: pw.FlexColumnWidth(0.7),
                   1: pw.FlexColumnWidth(3.0),
@@ -115,7 +196,9 @@ class InvoicePdfService {
                 },
                 children: [
                   pw.TableRow(
-                    decoration: pw.BoxDecoration(color: PdfColor.fromInt(0xFFF7E6BE)),
+                    decoration: pw.BoxDecoration(
+                      color: PdfColor.fromInt(0xFFF7E6BE),
+                    ),
                     children: [
                       _cell('#', bold: true),
                       _cell('Descripción', bold: true),
@@ -127,10 +210,21 @@ class InvoicePdfService {
                   pw.TableRow(
                     children: [
                       _cell('1'),
-                      _cell(descripcionDesdeDocumento(inv.fDocumento) ?? 'Detalle de comprobante'),
+                      _cell(
+                        descripcionDesdeDocumento(inv.fDocumento) ??
+                            'Detalle de comprobante',
+                      ),
                       _cell('1'),
-                      _cell(_fmtMoneySafe(_toNum(inv.fSubtotal) ?? _toNum(inv.montototal))),
-                      _cell(_fmtMoneySafe(_toNum(inv.fSubtotal) ?? _toNum(inv.montototal))),
+                      _cell(
+                        _fmtMoneySafe(
+                          _toNum(inv.fSubtotal) ?? _toNum(inv.montototal),
+                        ),
+                      ),
+                      _cell(
+                        _fmtMoneySafe(
+                          _toNum(inv.fSubtotal) ?? _toNum(inv.montototal),
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -150,16 +244,28 @@ class InvoicePdfService {
                             border: pw.Border.all(color: PdfColors.grey300),
                           ),
                           alignment: pw.Alignment.center,
-                          child: pw.Text('QR (pendiente)', style: pw.TextStyle(fontSize: 10, color: PdfColors.grey600)),
+                          child: pw.Text(
+                            'QR (pendiente)',
+                            style: pw.TextStyle(
+                              fontSize: 10,
+                              color: PdfColors.grey600,
+                            ),
+                          ),
                         ),
                         pw.SizedBox(height: 8),
                         pw.Align(
                           alignment: pw.Alignment.centerLeft,
-                          child: pw.Text('Código de Seguridad: ${inv.codigoSeguridad ?? '—'}', style: pw.TextStyle(fontSize: 10)),
+                          child: pw.Text(
+                            'Código de Seguridad: ${inv.codigoSeguridad ?? '—'}',
+                            style: pw.TextStyle(fontSize: 10),
+                          ),
                         ),
                         pw.Align(
                           alignment: pw.Alignment.centerLeft,
-                          child: pw.Text('Fecha Firma: ${_fmtDateDt(inv.fechaHoraFirma)}', style: pw.TextStyle(fontSize: 10)),
+                          child: pw.Text(
+                            'Fecha Firma: ${_fmtDateDt(inv.fechaHoraFirma)}',
+                            style: pw.TextStyle(fontSize: 10),
+                          ),
                         ),
                       ],
                     ),
@@ -169,9 +275,25 @@ class InvoicePdfService {
                     child: pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.end,
                       children: [
-                        _totalRow('Subtotal Gravado:', _fmtMoneySafe(_toNum(inv.montogravadototal) ?? _toNum(inv.fSubtotal))),
-                        _totalRow('Total ITBIS:', _fmtMoneySafe(_toNum(inv.totalitbis) ?? _toNum(inv.fItbis))),
-                        _totalRow('Monto Total:', _fmtMoneySafe(_toNum(inv.montototal) ?? _toNum(inv.fTotal))),
+                        _totalRow(
+                          'Subtotal Gravado:',
+                          _fmtMoneySafe(
+                            _toNum(inv.montogravadototal) ??
+                                _toNum(inv.fSubtotal),
+                          ),
+                        ),
+                        _totalRow(
+                          'Total ITBIS:',
+                          _fmtMoneySafe(
+                            _toNum(inv.totalitbis) ?? _toNum(inv.fItbis),
+                          ),
+                        ),
+                        _totalRow(
+                          'Monto Total:',
+                          _fmtMoneySafe(
+                            _toNum(inv.montototal) ?? _toNum(inv.fTotal),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -181,7 +303,10 @@ class InvoicePdfService {
               pw.Spacer(),
               pw.Align(
                 alignment: pw.Alignment.centerRight,
-                child: pw.Text('Generado por CENSAVID', style: pw.TextStyle(fontSize: 10)),
+                child: pw.Text(
+                  'Generado por CENSAVID',
+                  style: pw.TextStyle(fontSize: 10),
+                ),
               ),
             ],
           );
@@ -213,7 +338,10 @@ class InvoicePdfService {
       padding: pw.EdgeInsets.symmetric(vertical: 6, horizontal: 6),
       child: pw.Text(
         text,
-        style: pw.TextStyle(fontSize: 10, fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal),
+        style: pw.TextStyle(
+          fontSize: 10,
+          fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal,
+        ),
       ),
     );
   }
@@ -222,7 +350,10 @@ class InvoicePdfService {
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.end,
       children: [
-        pw.Text(label, style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold)),
+        pw.Text(
+          label,
+          style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold),
+        ),
         pw.SizedBox(width: 8),
         pw.Text(value, style: pw.TextStyle(fontSize: 11)),
       ],

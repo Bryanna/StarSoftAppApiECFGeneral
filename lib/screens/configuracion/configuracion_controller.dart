@@ -1,7 +1,4 @@
-import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../services/firestore_service.dart';
@@ -26,9 +23,8 @@ class ConfiguracionController extends GetxController {
 
   // Archivos
   String? digitalSignatureUrl;
+  String? digitalSignaturePassword;
   String? companyLogoUrl;
-  File? selectedSignatureFile;
-  File? selectedLogoFile;
 
   // Configuración de facturación
   InvoiceEnvironment selectedEnvironment = InvoiceEnvironment.certificacion;
@@ -95,6 +91,8 @@ class ConfiguracionController extends GetxController {
       if (companyData != null) {
         // URLs de archivos
         digitalSignatureUrl = companyData!['digitalSignatureUrl'] as String?;
+        digitalSignaturePassword =
+            companyData!['digitalSignaturePassword'] as String?;
         companyLogoUrl = companyData!['logoUrl'] as String?;
 
         // Configuración de facturación
@@ -256,77 +254,257 @@ class ConfiguracionController extends GetxController {
   }
 
   Future<void> pickDigitalSignature() async {
-    try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['p12', 'pfx'],
-        allowMultiple: false,
-      );
+    final TextEditingController urlController = TextEditingController();
+    final TextEditingController passwordController = TextEditingController();
 
-      if (result != null && result.files.isNotEmpty) {
-        selectedSignatureFile = File(result.files.first.path!);
-        update();
+    // Pre-llenar con los valores actuales si existen
+    if (digitalSignatureUrl != null && digitalSignatureUrl!.isNotEmpty) {
+      urlController.text = digitalSignatureUrl!;
+    }
+    if (digitalSignaturePassword != null &&
+        digitalSignaturePassword!.isNotEmpty) {
+      passwordController.text = digitalSignaturePassword!;
+    }
 
-        Get.snackbar(
-          'Archivo Seleccionado',
-          'Firma digital seleccionada: ${result.files.first.name}',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.green.shade600,
-          colorText: Colors.white,
-        );
-      }
-    } catch (e, st) {
-      LoggerService().error('configuracion.pick_signature_error', e, st);
+    final result = await Get.dialog<Map<String, String>>(
+      AlertDialog(
+        title: const Text('Configurar Firma Digital'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Introduce la URL y contraseña de tu certificado digital:',
+                style: TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: urlController,
+                decoration: const InputDecoration(
+                  labelText: 'URL del certificado',
+                  hintText: 'https://ejemplo.com/certificado.p12',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.link),
+                ),
+                keyboardType: TextInputType.url,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: passwordController,
+                decoration: const InputDecoration(
+                  labelText: 'Contraseña del certificado',
+                  hintText: 'Contraseña para abrir el certificado',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.lock),
+                ),
+                obscureText: true,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Nota: La contraseña se almacena de forma segura en la configuración.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade600,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              GestureDetector(
+                onTap: () => Get.back(),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: const Text(
+                    'Cancelar',
+                    style: TextStyle(
+                      color: Colors.black87,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              GestureDetector(
+                onTap: () {
+                  final url = urlController.text.trim();
+                  final password = passwordController.text.trim();
+
+                  if (url.isNotEmpty && Uri.tryParse(url) != null) {
+                    Get.back(result: {'url': url, 'password': password});
+                  } else {
+                    Get.snackbar(
+                      'Error',
+                      'Por favor introduce una URL válida',
+                      snackPosition: SnackPosition.BOTTOM,
+                      backgroundColor: Colors.red.shade600,
+                      colorText: Colors.white,
+                    );
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF005285),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text(
+                    'Guardar',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    if (result != null) {
+      digitalSignatureUrl = result['url'];
+      digitalSignaturePassword = result['password'];
+      update();
+
       Get.snackbar(
-        'Error',
-        'No se pudo seleccionar el archivo de firma digital',
+        'Configuración Guardada',
+        'Certificado digital configurado correctamente',
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.shade600,
+        backgroundColor: Colors.green.shade600,
         colorText: Colors.white,
       );
     }
   }
 
   Future<void> pickCompanyLogo() async {
-    try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.image,
-        allowMultiple: false,
-      );
+    final TextEditingController urlController = TextEditingController();
 
-      if (result != null && result.files.isNotEmpty) {
-        selectedLogoFile = File(result.files.first.path!);
-        update();
+    // Pre-llenar con la URL actual si existe
+    if (companyLogoUrl != null && companyLogoUrl!.isNotEmpty) {
+      urlController.text = companyLogoUrl!;
+    }
 
-        Get.snackbar(
-          'Archivo Seleccionado',
-          'Logo seleccionado: ${result.files.first.name}',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.green.shade600,
-          colorText: Colors.white,
-        );
-      }
-    } catch (e, st) {
-      LoggerService().error('configuracion.pick_logo_error', e, st);
+    final result = await Get.dialog<String>(
+      AlertDialog(
+        title: const Text('URL del Logo'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Introduce la URL donde está alojado el logo de tu empresa:',
+              style: TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: urlController,
+              decoration: const InputDecoration(
+                labelText: 'URL del logo',
+                hintText: 'https://ejemplo.com/logo.png',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.image),
+              ),
+              keyboardType: TextInputType.url,
+            ),
+          ],
+        ),
+        actions: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              GestureDetector(
+                onTap: () => Get.back(),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: const Text(
+                    'Cancelar',
+                    style: TextStyle(
+                      color: Colors.black87,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              GestureDetector(
+                onTap: () {
+                  final url = urlController.text.trim();
+                  if (url.isNotEmpty && Uri.tryParse(url) != null) {
+                    Get.back(result: url);
+                  } else {
+                    Get.snackbar(
+                      'Error',
+                      'Por favor introduce una URL válida',
+                      snackPosition: SnackPosition.BOTTOM,
+                      backgroundColor: Colors.red.shade600,
+                      colorText: Colors.white,
+                    );
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF005285),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text(
+                    'Guardar',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    if (result != null) {
+      companyLogoUrl = result;
+      update();
+
       Get.snackbar(
-        'Error',
-        'No se pudo seleccionar el archivo de logo',
+        'URL Guardada',
+        'URL del logo configurada correctamente',
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.shade600,
+        backgroundColor: Colors.green.shade600,
         colorText: Colors.white,
       );
-    }
-  }
-
-  Future<String?> _uploadFile(File file, String path) async {
-    try {
-      final ref = FirebaseStorage.instance.ref().child(path);
-      final uploadTask = ref.putFile(file);
-      final snapshot = await uploadTask;
-      return await snapshot.ref.getDownloadURL();
-    } catch (e, st) {
-      LoggerService().error('configuracion.upload_file_error', e, st);
-      return null;
     }
   }
 
@@ -370,36 +548,35 @@ class ConfiguracionController extends GetxController {
           ? 'Sin configurar'
           : urlERPEndpointCtrl.text.trim();
 
-      // Subir firma digital si se seleccionó una nueva
-      if (selectedSignatureFile != null) {
-        final signatureUrl = await _uploadFile(
-          selectedSignatureFile!,
-          'companies/$companyRnc/signature.p12',
+      // Guardar URLs de archivos si están configuradas
+      if (digitalSignatureUrl != null && digitalSignatureUrl!.isNotEmpty) {
+        updateData['digitalSignatureUrl'] = digitalSignatureUrl;
+        debugPrint(
+          '[ConfigController] Guardando digitalSignatureUrl: $digitalSignatureUrl',
         );
-        if (signatureUrl != null) {
-          updateData['digitalSignatureUrl'] = signatureUrl;
-          digitalSignatureUrl = signatureUrl;
-        }
       }
 
-      // Subir logo si se seleccionó uno nuevo
-      if (selectedLogoFile != null) {
-        final logoUrl = await _uploadFile(
-          selectedLogoFile!,
-          'companies/$companyRnc/logo.png',
+      if (digitalSignaturePassword != null &&
+          digitalSignaturePassword!.isNotEmpty) {
+        updateData['digitalSignaturePassword'] = digitalSignaturePassword;
+        debugPrint(
+          '[ConfigController] Guardando digitalSignaturePassword: [OCULTA]',
         );
-        if (logoUrl != null) {
-          updateData['logoUrl'] = logoUrl;
-          companyLogoUrl = logoUrl;
-        }
       }
+
+      if (companyLogoUrl != null && companyLogoUrl!.isNotEmpty) {
+        updateData['logoUrl'] = companyLogoUrl;
+        debugPrint('[ConfigController] Guardando logoUrl: $companyLogoUrl');
+      }
+
+      debugPrint(
+        '[ConfigController] Datos a guardar: ${updateData.keys.toList()}',
+      );
 
       // Actualizar en Firestore
       await _db.set('companies/$companyRnc', updateData, merge: true);
 
-      // Limpiar archivos seleccionados
-      selectedSignatureFile = null;
-      selectedLogoFile = null;
+      // Actualizar variables locales
       invoiceStoragePath = storagePathCtrl.text.trim();
       urlERPEndpoint = urlERPEndpointCtrl.text.trim().isEmpty
           ? 'Sin configurar'
@@ -448,12 +625,35 @@ class ConfiguracionController extends GetxController {
 
     switch (selectedEnvironment) {
       case InvoiceEnvironment.certificacion:
-        return '$base/cert';
+        return base; // No agregar /cert para certificación
       case InvoiceEnvironment.test:
         return '$base/test';
       case InvoiceEnvironment.produccion:
         return '$base/prod';
     }
+  }
+
+  // Método temporal de debug
+  void debugConfiguration() {
+    final config = {
+      'digitalSignatureUrl': digitalSignatureUrl,
+      'digitalSignaturePassword': digitalSignaturePassword != null
+          ? '[CONFIGURADA]'
+          : null,
+      'companyLogoUrl': companyLogoUrl,
+      'urlERPEndpoint': urlERPEndpoint,
+      'baseEndpointUrl': baseEndpointUrl,
+      'companyRnc': companyRnc,
+    };
+
+    debugPrint('[ConfigController] Configuración actual: $config');
+
+    Get.snackbar(
+      'Debug Configuración',
+      'Logo: ${companyLogoUrl ?? 'No configurado'}\nCertificado: ${digitalSignatureUrl ?? 'No configurado'}\nERP: ${urlERPEndpoint}',
+      snackPosition: SnackPosition.BOTTOM,
+      duration: const Duration(seconds: 8),
+    );
   }
 
   @override

@@ -154,6 +154,29 @@ class _ConfigurationContent extends StatelessWidget {
 
               const SizedBox(height: 32),
               _SaveButton(controller: controller),
+              const SizedBox(height: 16),
+              // Botón temporal de debug
+              GestureDetector(
+                onTap: () => controller.debugConfiguration(),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.purple.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.purple.shade300),
+                  ),
+                  child: const Text(
+                    'Debug: Ver configuración actual',
+                    style: TextStyle(
+                      color: Colors.purple,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
               const SizedBox(height: 24),
             ],
           ),
@@ -310,11 +333,13 @@ class _FilesSection extends StatelessWidget {
               children: [
                 Expanded(
                   child: _CompactFileCard(
-                    title: 'Firma Digital',
+                    title: 'Certificado Digital',
                     icon: Icons.verified_user_outlined,
                     hasFile:
-                        controller.digitalSignatureUrl != null ||
-                        controller.selectedSignatureFile != null,
+                        controller.digitalSignatureUrl != null &&
+                        controller.digitalSignatureUrl!.isNotEmpty &&
+                        controller.digitalSignaturePassword != null &&
+                        controller.digitalSignaturePassword!.isNotEmpty,
                     onTap: controller.pickDigitalSignature,
                   ),
                 ),
@@ -324,8 +349,8 @@ class _FilesSection extends StatelessWidget {
                     title: 'Logo Empresa',
                     icon: Icons.image_outlined,
                     hasFile:
-                        controller.companyLogoUrl != null ||
-                        controller.selectedLogoFile != null,
+                        controller.companyLogoUrl != null &&
+                        controller.companyLogoUrl!.isNotEmpty,
                     onTap: controller.pickCompanyLogo,
                   ),
                 ),
@@ -766,7 +791,7 @@ class _CompactFileCard extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              hasFile ? 'Cargado' : 'Seleccionar',
+              hasFile ? 'Configurado' : 'Configurar URL',
               style: TextStyle(
                 fontSize: 10,
                 color: hasFile ? Colors.green.shade600 : Colors.grey.shade500,

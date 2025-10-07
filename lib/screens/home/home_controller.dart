@@ -178,6 +178,9 @@ class HomeController extends GetxController {
 
   Future<void> sendInvoice(Datum invoice) async {
     try {
+      debugPrint(
+        '[HomeController] Generando PDF para factura: ${invoice.fDocumento}',
+      );
       final bytes = await InvoicePdfService.buildPdf(PdfPageFormat.a4, invoice);
       final name =
           'Factura_${invoice.fDocumento ?? invoice.encf ?? 'CENSAVID'}.pdf';
@@ -188,6 +191,7 @@ class HomeController extends GetxController {
         snackPosition: SnackPosition.BOTTOM,
       );
     } catch (e) {
+      debugPrint('[HomeController] Error generando PDF: $e');
       Get.snackbar(
         'Error',
         'No se pudo enviar: $e',
