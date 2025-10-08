@@ -48,6 +48,9 @@ class ConfiguracionController extends GetxController {
   // Configuración de endpoint ERP
   String urlERPEndpoint = 'Sin configurar';
 
+  // Configuración de datos de prueba
+  bool useFakeData = false;
+
   // Controllers para edición
   final storagePathCtrl = TextEditingController();
   final googleDriveFolderCtrl = TextEditingController();
@@ -128,6 +131,9 @@ class ConfiguracionController extends GetxController {
         // Configuración de endpoint ERP
         urlERPEndpoint = companyData!['urlERPEndpoint'] ?? 'Sin configurar';
         urlERPEndpointCtrl.text = urlERPEndpoint;
+
+        // Configuración de datos de prueba
+        useFakeData = companyData!['useFakeData'] ?? false;
       }
 
       LoggerService().info('configuracion.load_success', {
@@ -386,13 +392,18 @@ class ConfiguracionController extends GetxController {
       digitalSignaturePassword = result['password'];
       update();
 
+      // Mostrar mensaje de guardando
       Get.snackbar(
-        'Configuración Guardada',
-        'Certificado digital configurado correctamente',
+        'Guardando...',
+        'Guardando certificado en Firebase...',
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green.shade600,
+        backgroundColor: Colors.blue.shade600,
         colorText: Colors.white,
+        duration: const Duration(seconds: 1),
       );
+
+      // Guardar inmediatamente en Firebase
+      await _saveDigitalSignatureToFirebase();
     }
   }
 
@@ -498,13 +509,18 @@ class ConfiguracionController extends GetxController {
       companyLogoUrl = result;
       update();
 
+      // Mostrar mensaje de guardando
       Get.snackbar(
-        'URL Guardada',
-        'URL del logo configurada correctamente',
+        'Guardando...',
+        'Guardando logo en Firebase...',
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green.shade600,
+        backgroundColor: Colors.blue.shade600,
         colorText: Colors.white,
+        duration: const Duration(seconds: 1),
       );
+
+      // Guardar inmediatamente en Firebase
+      await _saveLogoToFirebase();
     }
   }
 
@@ -548,26 +564,11 @@ class ConfiguracionController extends GetxController {
           ? 'Sin configurar'
           : urlERPEndpointCtrl.text.trim();
 
-      // Guardar URLs de archivos si están configuradas
-      if (digitalSignatureUrl != null && digitalSignatureUrl!.isNotEmpty) {
-        updateData['digitalSignatureUrl'] = digitalSignatureUrl;
-        debugPrint(
-          '[ConfigController] Guardando digitalSignatureUrl: $digitalSignatureUrl',
-        );
-      }
+      // Configuración de datos de prueba
+      updateData['useFakeData'] = useFakeData;
 
-      if (digitalSignaturePassword != null &&
-          digitalSignaturePassword!.isNotEmpty) {
-        updateData['digitalSignaturePassword'] = digitalSignaturePassword;
-        debugPrint(
-          '[ConfigController] Guardando digitalSignaturePassword: [OCULTA]',
-        );
-      }
-
-      if (companyLogoUrl != null && companyLogoUrl!.isNotEmpty) {
-        updateData['logoUrl'] = companyLogoUrl;
-        debugPrint('[ConfigController] Guardando logoUrl: $companyLogoUrl');
-      }
+      // Nota: Los archivos (logo y certificado) ya se guardan inmediatamente
+      // cuando se configuran, no es necesario guardarlos aquí nuevamente
 
       debugPrint(
         '[ConfigController] Datos a guardar: ${updateData.keys.toList()}',
@@ -633,6 +634,90 @@ class ConfiguracionController extends GetxController {
     }
   }
 
+  // Métodos para guardar inmediatamente en Firebase
+  Future<void> _saveDigitalSignatureToFirebase() async {
+    if (companyRnc == null) return;
+
+    try {
+      loading = true;
+      update();
+
+      Map<String, dynamic> updateData = {};
+
+      if (digitalSignatureUrl != null && digitalSignatureUrl!.isNotEmpty) {
+        updateData['digitalSignatureUrl'] = digitalSignatureUrl;
+      }
+
+      if (digitalSignaturePassword != null &&
+          digitalSignaturePassword!.isNotEmpty) {
+        updateData['digitalSignaturePassword'] = digitalSignaturePassword;
+      }
+
+      if (updateData.isNotEmpty) {
+        updateData['updatedAt'] = FieldValue.serverTimestamp();
+        await _db.set('companies/$companyRnc', updateData, merge: true);
+
+        Get.snackbar(
+          'Certificado Guardado',
+          'Certificado digital guardado en Firebase correctamente',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green.shade600,
+          colorText: Colors.white,
+        );
+      }
+    } catch (e, st) {
+      LoggerService().error('configuracion.save_signature_error', e, st);
+      Get.snackbar(
+        'Error',
+        'No se pudo guardar el certificado: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.shade600,
+        colorText: Colors.white,
+      );
+    } finally {
+      loading = false;
+      update();
+    }
+  }
+
+  Future<void> _saveLogoToFirebase() async {
+    if (companyRnc == null) return;
+
+    try {
+      loading = true;
+      update();
+
+      Map<String, dynamic> updateData = {};
+
+      if (companyLogoUrl != null && companyLogoUrl!.isNotEmpty) {
+        updateData['logoUrl'] = companyLogoUrl;
+        updateData['updatedAt'] = FieldValue.serverTimestamp();
+
+        await _db.set('companies/$companyRnc', updateData, merge: true);
+
+        Get.snackbar(
+          'Logo Guardado',
+          'Logo guardado en Firebase correctamente',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green.shade600,
+          colorText: Colors.white,
+        );
+      }
+    } catch (e, st) {
+      LoggerService().error('configuracion.save_logo_error', e, st);
+      Get.snackbar(
+        'Error',
+        'No se pudo guardar el logo: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.shade600,
+        colorText: Colors.white,
+      );
+    } finally {
+      loading = false;
+      update();
+    }
+  }
+
   // Método temporal de debug
   void debugConfiguration() {
     final config = {
@@ -650,10 +735,16 @@ class ConfiguracionController extends GetxController {
 
     Get.snackbar(
       'Debug Configuración',
-      'Logo: ${companyLogoUrl ?? 'No configurado'}\nCertificado: ${digitalSignatureUrl ?? 'No configurado'}\nERP: ${urlERPEndpoint}',
+      'Logo: ${companyLogoUrl ?? 'No configurado'}\nCertificado: ${digitalSignatureUrl ?? 'No configurado'}\nERP: $urlERPEndpoint',
       snackPosition: SnackPosition.BOTTOM,
       duration: const Duration(seconds: 8),
     );
+  }
+
+  // Método para alternar datos fake
+  void toggleFakeData(bool value) {
+    useFakeData = value;
+    update();
   }
 
   @override

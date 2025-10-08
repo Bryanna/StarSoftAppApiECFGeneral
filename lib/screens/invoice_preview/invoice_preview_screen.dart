@@ -8,7 +8,7 @@ import 'package:printing/printing.dart';
 
 import '../../models/invoice.dart';
 
-import '../../services/invoice_pdf_service.dart';
+import '../../services/enhanced_invoice_pdf_service.dart';
 import '../../services/company_config_service.dart';
 
 class InvoicePreviewScreen extends StatefulWidget {
@@ -87,6 +87,6 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
   }
 
   Future<Uint8List> _buildPdf(PdfPageFormat format, Datum inv) async {
-    return InvoicePdfService.buildPdf(format, inv);
+    return EnhancedInvoicePdfService.buildPdf(format, inv);
   }
 }

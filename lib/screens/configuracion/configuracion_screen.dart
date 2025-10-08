@@ -152,31 +152,37 @@ class _ConfigurationContent extends StatelessWidget {
                   ],
                 ),
 
-              const SizedBox(height: 32),
-              _SaveButton(controller: controller),
-              const SizedBox(height: 16),
-              // Botón temporal de debug
-              GestureDetector(
-                onTap: () => controller.debugConfiguration(),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  decoration: BoxDecoration(
-                    color: Colors.purple.shade100,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.purple.shade300),
-                  ),
-                  child: const Text(
-                    'Debug: Ver configuración actual',
-                    style: TextStyle(
-                      color: Colors.purple,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
+              const SizedBox(height: 24),
+              // Nota informativa
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      size: 16,
+                      color: Colors.blue.shade700,
                     ),
-                    textAlign: TextAlign.center,
-                  ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Los archivos (logo y certificado) se guardan automáticamente. Este botón guarda la configuración general.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.blue.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
+              const SizedBox(height: 16),
+              _SaveButton(controller: controller),
               const SizedBox(height: 24),
             ],
           ),
@@ -504,7 +510,7 @@ class _SaveButton extends StatelessWidget {
                 Text(
                   c.loading
                       ? 'Guardando Configuración...'
-                      : 'Guardar Configuración',
+                      : 'Guardar Configuración General',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 16,
@@ -637,6 +643,73 @@ class _ConfigurationSection extends StatelessWidget {
               icon: Icons.integration_instructions_outlined,
               helperText:
                   'URL completa del ERP (ej: http://servidor:puerto/api/invoices)',
+            ),
+
+            const SizedBox(height: 12),
+
+            // Switch para datos fake
+            GetBuilder<ConfiguracionController>(
+              builder: (c) {
+                return Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: c.useFakeData
+                        ? Colors.orange.shade50
+                        : Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: c.useFakeData
+                          ? Colors.orange.shade300
+                          : Colors.grey.shade300,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.science_outlined,
+                        color: c.useFakeData
+                            ? Colors.orange.shade700
+                            : Colors.grey.shade600,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Datos de Prueba',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: c.useFakeData
+                                    ? Colors.orange.shade700
+                                    : Colors.grey.shade700,
+                              ),
+                            ),
+                            Text(
+                              c.useFakeData
+                                  ? 'Usando datos simulados para testing'
+                                  : 'Usando datos reales del ERP',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: c.useFakeData
+                                    ? Colors.orange.shade600
+                                    : Colors.grey.shade500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Switch(
+                        value: c.useFakeData,
+                        onChanged: c.toggleFakeData,
+                        activeColor: Colors.orange,
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
 
             const SizedBox(height: 12),

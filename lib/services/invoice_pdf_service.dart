@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -22,10 +23,17 @@ class InvoicePdfService {
         companyConfig?['logoUrl'] as String? ??
         'https://upload.wikimedia.org/wikipedia/commons/1/17/Google-flutter-logo.png';
 
+    debugPrint('[InvoicePdfService] Logo URL: $logoUrl');
+    debugPrint(
+      '[InvoicePdfService] Company config: ${companyConfig?.keys.toList()}',
+    );
+
     pw.ImageProvider? logo;
     try {
       logo = await networkImage(logoUrl);
+      debugPrint('[InvoicePdfService] Logo cargado exitosamente');
     } catch (e) {
+      debugPrint('[InvoicePdfService] Error cargando logo: $e');
       // Si falla cargar el logo, usar uno por defecto o null
       try {
         logo = await networkImage(
