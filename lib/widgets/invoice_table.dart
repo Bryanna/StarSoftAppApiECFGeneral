@@ -34,20 +34,16 @@ class InvoiceTable extends StatelessWidget {
       builder: (context, constraints) {
         final sorted = _sortedBySecuencia(invoices);
         final columnWidths = <int, TableColumnWidth>{
-          0: const FlexColumnWidth(1.2), // Documento
-          1: const FlexColumnWidth(1.0), // ID Paciente
-          2: const FlexColumnWidth(1.8), // Nombre Paciente
-          3: const FlexColumnWidth(1.4), // ARS
+          0: const FlexColumnWidth(1.2), // eCF
+          1: const FlexColumnWidth(1.0), // Código Interno
+          2: const FlexColumnWidth(2.0), // Razón Social Comprador
+          3: const FlexColumnWidth(1.0), // (Vacío - era ARS)
           4: const FlexColumnWidth(1.1), // Monto
           5: const FlexColumnWidth(1.0), // Fecha
           6: const FlexColumnWidth(1.2), // RNC
-          7: const FlexColumnWidth(
-            1.2,
-          ), // Tipo Comprobante (ligeramente más estrecho)
+          7: const FlexColumnWidth(1.2), // Tipo Comprobante
           8: const FlexColumnWidth(1.0), // Estado
-          9: const FlexColumnWidth(
-            1.0,
-          ), // Acciones (más ancho para evitar overflow)
+          9: const FlexColumnWidth(1.0), // Acciones
         };
 
         Widget headerCell(String text) => Container(
@@ -81,10 +77,10 @@ class InvoiceTable extends StatelessWidget {
                 children: [
                   TableRow(
                     children: [
-                      headerCell('Documento'),
-                      headerCell('ID Paciente'),
-                      headerCell('Nombre Paciente'),
-                      headerCell('ARS'),
+                      headerCell('eCF'),
+                      headerCell('Código'),
+                      headerCell('Razón Social'),
+                      headerCell(''), // Columna vacía
                       headerCell('Monto'),
                       headerCell('Fecha'),
                       headerCell('RNC'),
@@ -114,21 +110,13 @@ class InvoiceTable extends StatelessWidget {
                       for (final inv in sorted)
                         TableRow(
                           children: [
-                            bodyCell(Text(inv.fDocumento ?? inv.encf ?? '')),
-                            bodyCell(Text('${inv.fPacienteId ?? ''}')),
-                            bodyCell(Text('${inv.fPacienteNombre ?? ''}')),
-                            bodyCell(Text('${inv.fArsNombre ?? ''}')),
-                            bodyCell(Text(_formatMonto(inv.montototal ?? ''))),
-                            bodyCell(
-                              Text(
-                                inv.fechaemision != null
-                                    ? _formatDate(inv.fechaemision!)
-                                    : '',
-                              ),
-                            ),
-                            bodyCell(
-                              Text(inv.rnccomprador ?? inv.fRncReceptor ?? ''),
-                            ),
+                            bodyCell(Text(_getDocumento(inv))),
+                            bodyCell(Text(_getCodigoInternoComprador(inv))),
+                            bodyCell(Text(_getRazonSocialComprador(inv))),
+                            bodyCell(Text('')), // ARS no existe en JSON real
+                            bodyCell(Text(_formatMonto(_getMontoTotal(inv)))),
+                            bodyCell(Text(_getFechaEmision(inv))),
+                            bodyCell(Text(_getRNCComprador(inv))),
                             bodyCell(_typeChip(_tipoComprobanteAlias(inv))),
                             bodyCell(StatusChip(status: _statusFrom(inv))),
                             bodyCell(_ActionsMenu(inv)),
@@ -161,7 +149,7 @@ class InvoiceTable extends StatelessWidget {
                 Row(
                   children: [
                     Text(
-                      inv.fDocumento ?? inv.encf ?? '',
+                      _getDocumento(inv),
                       style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
                     const Spacer(),
@@ -173,18 +161,11 @@ class InvoiceTable extends StatelessWidget {
                   spacing: 16,
                   runSpacing: 8,
                   children: [
-                    _kv(
-                      'Fecha',
-                      inv.fechaemision != null
-                          ? _formatDate(inv.fechaemision!)
-                          : '',
-                    ),
-                    _kv('ID Paciente', '${inv.fPacienteId ?? ''}'),
-                    _kv('Paciente', '${inv.fPacienteNombre ?? ''}'),
-                    _kv('RNC', inv.rnccomprador ?? inv.fRncReceptor ?? ''),
-                    _kv('ARS', '${inv.fArsNombre ?? ''}'),
+                    _kv('Fecha', _getFechaEmision(inv)),
+                    _kv('Comprador', _getRazonSocialComprador(inv)),
+                    _kv('RNC', _getRNCComprador(inv)),
                     _kv('Comprobante', _tipoComprobanteAlias(inv)),
-                    _kv('Monto', _formatMonto(inv.montototal ?? '')),
+                    _kv('Monto', _formatMonto(_getMontoTotal(inv))),
                     Row(
                       children: [
                         const Text('Estado: '),
@@ -259,11 +240,45 @@ class InvoiceTable extends StatelessWidget {
     return DisplayStatus.pendiente;
   }
 
+  // Métodos para extraer datos del JSON real
+  String _getDocumento(Datum inv) {
+    // Usar ENCF del JSON como documento principal
+    return inv.encf ?? inv.fDocumento ?? '';
+  }
+
+  String _getCodigoInternoComprador(Datum inv) {
+    // Usar CodigoInternoComprador del JSON como ID del paciente
+    return ''; // Este campo no siempre existe, dejarlo vacío
+  }
+
+  String _getRazonSocialComprador(Datum inv) {
+    // Usar RazonSocialComprador del JSON como nombre del paciente
+    return inv.razonsocialcomprador?.toString() ?? '';
+  }
+
+  String _getMontoTotal(Datum inv) {
+    // Usar MontoTotal del JSON
+    return inv.montototal ?? '';
+  }
+
+  String _getFechaEmision(Datum inv) {
+    // Formatear fecha de emisión
+    if (inv.fechaemision != null) {
+      return _formatDate(inv.fechaemision!);
+    }
+    return '';
+  }
+
+  String _getRNCComprador(Datum inv) {
+    // Usar RNCComprador del JSON
+    return inv.rnccomprador ?? '';
+  }
+
   String _tipoComprobanteAlias(Datum inv) {
-    final base =
-        inv.fDocumento ?? inv.encf ?? inv.tipoecf ?? inv.tipoComprobante ?? '';
-    final alias = aliasDesdeDocumento(base);
-    return alias ?? (inv.tipoComprobante ?? inv.tipoecf ?? '');
+    // Usar ENCF para determinar el tipo
+    final encf = inv.encf ?? inv.fDocumento ?? '';
+    final alias = aliasDesdeDocumento(encf);
+    return alias ?? '';
   }
 
   Widget _typeChip(String alias) {

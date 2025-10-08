@@ -1,6 +1,8 @@
 import 'package:get/get.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'dart:convert';
 import '../../models/invoice.dart';
 import '../../models/ui_types.dart';
 import '../../models/tipo_comprobante.dart';
@@ -178,23 +180,26 @@ class HomeController extends GetxController {
 
   Future<void> sendInvoice(Datum invoice) async {
     try {
+      // Crear el JSON scenario como en response.json
+      final scenarioData = _createScenarioFromInvoice(invoice);
+      final jsonString = JsonEncoder.withIndent('  ').convert(scenarioData);
+
+      // Mostrar en consola (print)
+      debugPrint('[HomeController] ===== DATOS DEL SCENARIO =====');
       debugPrint(
-        '[HomeController] Generando PDF para factura: ${invoice.fDocumento}',
+        '[HomeController] Factura: ${invoice.fDocumento ?? invoice.encf}',
       );
-      final bytes = await InvoicePdfService.buildPdf(PdfPageFormat.a4, invoice);
-      final name =
-          'Factura_${invoice.fDocumento ?? invoice.encf ?? 'CENSAVID'}.pdf';
-      await Printing.sharePdf(bytes: bytes, filename: name);
-      Get.snackbar(
-        'Enviado',
-        '${invoice.fDocumento ?? '-'} compartido correctamente',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      debugPrint('[HomeController] JSON Scenario:');
+      debugPrint(jsonString);
+      debugPrint('[HomeController] ================================');
+
+      // Mostrar el diálogo con la información
+      _showInvoiceDataDialog(scenarioData);
     } catch (e) {
-      debugPrint('[HomeController] Error generando PDF: $e');
+      debugPrint('[HomeController] Error creando scenario: $e');
       Get.snackbar(
         'Error',
-        'No se pudo enviar: $e',
+        'No se pudo procesar la factura: $e',
         snackPosition: SnackPosition.BOTTOM,
       );
     }
@@ -246,6 +251,167 @@ class HomeController extends GetxController {
       hasConnectionError = true;
       errorMessage = 'Error inesperado: $error';
     }
+  }
+
+  // Método para crear el scenario JSON desde una factura
+  Map<String, dynamic> _createScenarioFromInvoice(Datum invoice) {
+    return {
+      "scenario": {
+        "CasoPrueba": invoice.encf ?? invoice.fDocumento ?? "",
+        "Version": "1.0",
+        "TipoeCF": _extractTipoeCF(invoice),
+        "ENCF": invoice.encf ?? invoice.fDocumento ?? "",
+        "FechaVencimientoSecuencia": _formatDateForScenario(
+          DateTime.now().add(Duration(days: 365)),
+        ),
+        "IndicadorNotaCredito": "#e",
+        "IndicadorEnvioDiferido": "#e",
+        "IndicadorMontoGravado": "#e",
+        "TipoIngresos": "01",
+        "TipoPago": "1",
+        "FechaLimitePago": "#e",
+        "TerminoPago": "#e",
+        "FormaPago[1]": "1",
+        "MontoPago[1]": invoice.montototal ?? "0.00",
+        "FormaPago[2]": "#e",
+        "MontoPago[2]": "#e",
+        "RNCEmisor": "132177975", // Valor por defecto
+        "RazonSocialEmisor": "DOCUMENTOS ELECTRONICOS DE 02",
+        "NombreComercial": "DOCUMENTOS ELECTRONICOS DE 02",
+        "DireccionEmisor":
+            "AVE. ISABEL AGUIAR NO. 269, ZONA INDUSTRIAL DE HERRERA",
+        "Municipio": "010100",
+        "Provincia": "010000",
+        "TelefonoEmisor[1]": "809-472-7676",
+        "CorreoEmisor": "info@empresa.com",
+        "WebSite": "www.facturaelectronica.com",
+        "CodigoVendedor":
+            "AA0000000100000000010000000002000000000300000000050000000006",
+        "NumeroFacturaInterna": invoice.fDocumento ?? invoice.encf ?? "",
+        "FechaEmision": _formatDateForScenario(
+          invoice.fechaemision ?? DateTime.now(),
+        ),
+        "RNCComprador": invoice.rnccomprador ?? "",
+        "RazonSocialComprador": invoice.razonsocialcomprador?.toString() ?? "",
+        "ContactoComprador": "CONTACTO COMPRADOR",
+        "CorreoComprador": "comprador@email.com",
+        "DireccionComprador": "DIRECCION DEL COMPRADOR",
+        "MunicipioComprador": "010100",
+        "ProvinciaComprador": "010000",
+        "MontoExento": invoice.montototal ?? "0.00",
+        "MontoTotal": invoice.montototal ?? "0.00",
+        "TipoMoneda": "DOP",
+        "NumeroLinea[1]": "1",
+        "IndicadorFacturacion[1]": "4",
+        "NombreItem[1]": "PRODUCTO/SERVICIO",
+        "IndicadorBienoServicio[1]": "1",
+        "CantidadItem[1]": "1.00",
+        "UnidadMedida[1]": "47",
+        "PrecioUnitarioItem[1]": invoice.montototal ?? "0.00",
+        "MontoItem[1]": invoice.montototal ?? "0.00",
+      },
+    };
+  }
+
+  // Método para extraer el tipo de eCF
+  String _extractTipoeCF(Datum invoice) {
+    final encf = invoice.encf ?? invoice.fDocumento ?? "";
+    if (encf.startsWith("E31")) return "31";
+    if (encf.startsWith("E32")) return "32";
+    if (encf.startsWith("E33")) return "33";
+    if (encf.startsWith("E34")) return "34";
+    if (encf.startsWith("E41")) return "41";
+    if (encf.startsWith("E43")) return "43";
+    if (encf.startsWith("E44")) return "44";
+    if (encf.startsWith("E45")) return "45";
+    if (encf.startsWith("E46")) return "46";
+    if (encf.startsWith("E47")) return "47";
+    return "33"; // Por defecto
+  }
+
+  // Método para formatear fecha para el scenario
+  String _formatDateForScenario(DateTime date) {
+    return "${date.day.toString().padLeft(2, '0')}-${date.month.toString().padLeft(2, '0')}-${date.year}";
+  }
+
+  // Método para mostrar el diálogo con la información
+  void _showInvoiceDataDialog(Map<String, dynamic> scenarioData) {
+    final jsonString = JsonEncoder.withIndent('  ').convert(scenarioData);
+
+    Get.dialog(
+      Dialog(
+        child: Container(
+          width: Get.width * 0.8,
+          height: Get.height * 0.8,
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Datos del Scenario',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  Row(
+                    children: [
+                      IconButton(
+                        onPressed: () {
+                          Clipboard.setData(ClipboardData(text: jsonString));
+                          Get.snackbar(
+                            'Copiado',
+                            'JSON copiado al portapapeles',
+                            snackPosition: SnackPosition.BOTTOM,
+                          );
+                        },
+                        icon: const Icon(Icons.copy),
+                        tooltip: 'Copiar JSON',
+                      ),
+                      IconButton(
+                        onPressed: () => Get.back(),
+                        icon: const Icon(Icons.close),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey[300]!),
+                  ),
+                  child: SingleChildScrollView(
+                    child: SelectableText(
+                      jsonString,
+                      style: const TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  ElevatedButton(
+                    onPressed: () => Get.back(),
+                    child: const Text('Cerrar'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

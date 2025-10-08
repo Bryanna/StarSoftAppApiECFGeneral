@@ -11,7 +11,14 @@ class CompanyConfigService {
     try {
       final uid = _auth.currentUser?.uid;
       if (uid == null) {
-        throw Exception('No hay usuario autenticado');
+        // Si no hay usuario autenticado, usar configuración por defecto con datos fake
+        LoggerService().info('company_config.no_user_using_fake_data', {});
+        return {
+          'useFakeData': true,
+          'razonSocial': 'CENTRO MEDICO PREVENTIVO SALUD Y VIDA SRL',
+          'logoUrl':
+              'https://upload.wikimedia.org/wikipedia/commons/1/17/Google-flutter-logo.png',
+        };
       }
 
       // Obtener datos del usuario para conseguir el RNC de la empresa
@@ -20,22 +27,55 @@ class CompanyConfigService {
       final companyRnc = userData?['companyRnc'] as String?;
 
       if (companyRnc == null || companyRnc.isEmpty) {
-        throw Exception('Usuario no tiene empresa asignada');
+        // Si no hay empresa asignada, usar datos fake
+        LoggerService().info('company_config.no_company_using_fake_data', {});
+        return {
+          'useFakeData': true,
+          'razonSocial': 'CENTRO MEDICO PREVENTIVO SALUD Y VIDA SRL',
+          'logoUrl':
+              'https://upload.wikimedia.org/wikipedia/commons/1/17/Google-flutter-logo.png',
+        };
       }
 
       // Obtener datos de la empresa
       final companyDoc = await _db.doc('companies/$companyRnc').get();
       final companyData = companyDoc.data();
 
+      if (companyData == null) {
+        // Si no hay datos de la empresa, usar datos fake
+        LoggerService().info('company_config.no_company_data_using_fake_data', {
+          'companyRnc': companyRnc,
+        });
+        return {
+          'useFakeData': true,
+          'razonSocial': 'CENTRO MEDICO PREVENTIVO SALUD Y VIDA SRL',
+          'logoUrl':
+              'https://upload.wikimedia.org/wikipedia/commons/1/17/Google-flutter-logo.png',
+        };
+      }
+
+      // Si no tiene URL del ERP configurada, habilitar datos fake
+      final erpUrl = companyData['urlERPEndpoint'] as String?;
+      if (erpUrl == null || erpUrl.isEmpty || erpUrl == 'Sin configurar') {
+        companyData['useFakeData'] = true;
+      }
+
       LoggerService().info('company_config.get_success', {
         'companyRnc': companyRnc,
-        'hasConfig': companyData != null,
+        'hasConfig': true,
+        'useFakeData': companyData['useFakeData'] ?? false,
       });
 
       return companyData;
     } catch (e, st) {
       LoggerService().error('company_config.get_error', e, st);
-      return null;
+      // En caso de error, usar datos fake como fallback
+      return {
+        'useFakeData': true,
+        'razonSocial': 'CENTRO MEDICO PREVENTIVO SALUD Y VIDA SRL',
+        'logoUrl':
+            'https://upload.wikimedia.org/wikipedia/commons/1/17/Google-flutter-logo.png',
+      };
     }
   }
 

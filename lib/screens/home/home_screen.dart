@@ -24,22 +24,16 @@ class HomeScreen extends StatelessWidget {
         final q = controller.query.trim().toLowerCase();
         bool matches(Datum inv) {
           String mStr(dynamic v) => (v ?? '').toString().toLowerCase();
-          final base =
-              inv.fDocumento ??
-              inv.encf ??
-              inv.tipoecf ??
-              inv.tipoComprobante ??
-              '';
-          final alias =
-              aliasDesdeDocumento(base) ??
-              (inv.tipoComprobante ?? inv.tipoecf ?? '');
+          final encf = inv.encf ?? '';
+          final alias = aliasDesdeDocumento(encf);
+          final razonSocial = inv.razonsocialcomprador?.toString() ?? '';
+
           return q.isEmpty ||
+              mStr(encf).contains(q) ||
               mStr(inv.fDocumento).contains(q) ||
-              mStr(inv.fPacienteId).contains(q) ||
-              mStr(inv.fPacienteNombre).contains(q) ||
+              mStr(razonSocial).contains(q) ||
               mStr(inv.rnccomprador).contains(q) ||
-              mStr(inv.fArsNombre).contains(q) ||
-              mStr(inv.tipoComprobante).contains(q) ||
+              mStr(inv.montototal).contains(q) ||
               mStr(alias).contains(q);
         }
 

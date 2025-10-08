@@ -1,60 +1,17 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 
-import 'package:http/http.dart' as http;
-
 import '../models/invoice.dart';
 import '../models/ui_types.dart';
-import 'company_config_service.dart';
+import 'fake_invoices_data.dart';
 
 class InvoiceService {
-  final CompanyConfigService _configService = CompanyConfigService();
-
   // Obtiene facturas reales desde el endpoint ERP configurado
   Future<List<Datum>> fetchInvoices(InvoiceCategory category) async {
     try {
-      // Obtener URL del ERP desde la configuración
-      final erpUrl = await _configService.getERPEndpointUrl();
-
-      // Si no hay URL configurada o es "Sin configurar", lanzar excepción específica
-      if (erpUrl == null || erpUrl.isEmpty || erpUrl == 'Sin configurar') {
-        throw ERPNotConfiguredException('URL del ERP no configurado');
-      }
-
-      // El URL ERP ya debe incluir la ruta completa, no agregar /api/invoices
-      final fullUrl = erpUrl.endsWith('/')
-          ? erpUrl.substring(0, erpUrl.length - 1)
-          : erpUrl;
-
-      final uri = Uri.parse(fullUrl);
-      debugPrint('[InvoiceService] GET $uri (category=$category)');
-
-      final resp = await http
-          .get(uri, headers: const {'Accept': 'application/json'})
-          .timeout(const Duration(seconds: 20));
-
-      debugPrint(
-        '[InvoiceService] status=${resp.statusCode} length=${resp.body.length}',
-      );
-
-      if (resp.statusCode >= 200 && resp.statusCode < 300) {
-        final model = invoiceModelFromJson(resp.body);
-        final data = model.data ?? [];
-
-        // Si no hay datos, lanzar excepción específica
-        if (data.isEmpty) {
-          throw NoInvoicesFoundException(
-            'No hay facturas pendientes en el ERP',
-          );
-        }
-
-        return data;
-      }
-
-      // Si el servidor responde con error, lanzar excepción específica
-      throw ERPConnectionException(
-        'Error del servidor ERP: ${resp.statusCode}',
-      );
+      // Por ahora, siempre usar datos fake para desarrollo
+      debugPrint('[InvoiceService] Using fake data for development');
+      return await _generateFakeInvoices(category);
     } on ERPNotConfiguredException {
       rethrow;
     } on NoInvoicesFoundException {
@@ -73,7 +30,73 @@ class InvoiceService {
     }
   }
 
-  // La generación de datos falsos ya no es necesaria.
+  // Genera datos fake para testing
+  Future<List<Datum>> _generateFakeInvoices(InvoiceCategory category) async {
+    debugPrint(
+      '[InvoiceService] Generando datos fake para categoría: $category',
+    );
+
+    try {
+      // Usar datos básicos que sabemos que funcionan
+      final fakeInvoices = _generateBasicFakeInvoices(category);
+
+      debugPrint(
+        '[InvoiceService] Generated ${fakeInvoices.length} fake invoices for $category',
+      );
+      return fakeInvoices;
+    } catch (e) {
+      debugPrint('[InvoiceService] Error generating fake data: $e');
+      return [];
+    }
+  }
+
+  // Datos completos basados en ejemplos.json y tipos.json
+  List<Datum> _generateBasicFakeInvoices(InvoiceCategory category) {
+    // Obtener TODAS las facturas del archivo fake_invoices_data.dart
+    final allInvoices = getAllFakeInvoices();
+
+    // Filtrar por categoría
+    switch (category) {
+      case InvoiceCategory.pacientes:
+        // Facturas de consumo y crédito fiscal para pacientes
+        return allInvoices
+            .where(
+              (inv) =>
+                  inv.tipoecf == '31' ||
+                  inv.tipoecf == '32' ||
+                  inv.tipoecf == '33',
+            )
+            .toList();
+      case InvoiceCategory.ars:
+        // Facturas específicas para ARS (RNC 533445861)
+        return allInvoices
+            .where((inv) => inv.rnccomprador == '533445861')
+            .toList();
+      case InvoiceCategory.enviados:
+        // Facturas que han sido firmadas/enviadas
+        return allInvoices.where((inv) => inv.fechaHoraFirma != null).toList();
+      case InvoiceCategory.notasCredito:
+        // Notas de crédito (E43)
+        return allInvoices.where((inv) => inv.tipoecf == '43').toList();
+      case InvoiceCategory.notasDebito:
+        // Notas de débito (E41)
+        return allInvoices.where((inv) => inv.tipoecf == '41').toList();
+      case InvoiceCategory.gastos:
+        // Gastos menores y comprobantes de compras (E44, E45, E46, E47)
+        return allInvoices
+            .where(
+              (inv) =>
+                  inv.tipoecf == '44' ||
+                  inv.tipoecf == '45' ||
+                  inv.tipoecf == '46' ||
+                  inv.tipoecf == '47',
+            )
+            .toList();
+      case InvoiceCategory.rechazados:
+        // Facturas rechazadas/anuladas
+        return allInvoices.where((inv) => inv.fAnulada == true).toList();
+    }
+  }
 }
 
 // Excepciones personalizadas para manejo de errores específicos
