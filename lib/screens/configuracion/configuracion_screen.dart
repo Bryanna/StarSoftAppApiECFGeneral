@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'configuracion_controller.dart';
+import '../../services/theme_service.dart';
 
 class ConfiguracionScreen extends StatelessWidget {
   const ConfiguracionScreen({super.key});
@@ -11,18 +12,25 @@ class ConfiguracionScreen extends StatelessWidget {
       init: ConfiguracionController(),
       builder: (controller) {
         return Scaffold(
-          backgroundColor: Colors.grey.shade50,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           appBar: AppBar(
-            backgroundColor: const Color(0xFF005285),
+            backgroundColor:
+                Theme.of(context).appBarTheme.backgroundColor ??
+                const Color(0xFF005285),
             centerTitle: false,
             elevation: 0,
-            title: const Text(
-              'Configuración del Sistema',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-              ),
+            title: Row(
+              children: [
+                Image.asset('assets/logo.png', height: 50),
+                const Text(
+                  'Configuración del Sistema',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
             iconTheme: const IconThemeData(color: Colors.white),
           ),
@@ -53,8 +61,14 @@ class _ErrorState extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Card(
-          elevation: 2,
-          color: Colors.white,
+          elevation: 4,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(
+              color: Theme.of(context).dividerColor.withOpacity(0.2),
+              width: 1,
+            ),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(32),
             child: Column(
@@ -66,14 +80,20 @@ class _ErrorState extends StatelessWidget {
                   size: 48,
                 ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'Error de Configuración',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).textTheme.bodyLarge?.color,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   message,
-                  style: const TextStyle(color: Colors.grey),
+                  style: TextStyle(
+                    color: Theme.of(context).textTheme.bodySmall?.color,
+                  ),
                   textAlign: TextAlign.center,
                 ),
               ],
@@ -101,14 +121,21 @@ class _ConfigurationContent extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Configuración de Facturación Electrónica',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).textTheme.bodyLarge?.color,
+                ),
               ),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 'Configure los parámetros necesarios para la emisión de facturas electrónicas',
-                style: TextStyle(color: Colors.grey, fontSize: 16),
+                style: TextStyle(
+                  color: Theme.of(context).textTheme.bodySmall?.color,
+                  fontSize: 16,
+                ),
               ),
               const SizedBox(height: 24),
 
@@ -123,6 +150,8 @@ class _ConfigurationContent extends StatelessWidget {
                           _CompanyInfoSection(controller: controller),
                           const SizedBox(height: 20),
                           _FilesSection(controller: controller),
+                          const SizedBox(height: 20),
+                          _AppearanceSection(),
                         ],
                       ),
                     ),
@@ -147,6 +176,8 @@ class _ConfigurationContent extends StatelessWidget {
                     _ConfigurationSection(controller: controller),
                     const SizedBox(height: 20),
                     _FilesSection(controller: controller),
+                    const SizedBox(height: 20),
+                    _AppearanceSection(),
                     const SizedBox(height: 20),
                     _StorageSection(controller: controller),
                   ],
@@ -201,8 +232,14 @@ class _CompanyInfoSection extends StatelessWidget {
     final companyData = controller.companyData ?? {};
 
     return Card(
-      elevation: 2,
-      color: Colors.white,
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Theme.of(context).dividerColor.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -210,15 +247,19 @@ class _CompanyInfoSection extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.business_outlined,
-                  color: Color(0xFF005285),
+                  color: Theme.of(context).colorScheme.primary,
                   size: 20,
                 ),
                 const SizedBox(width: 8),
-                const Text(
+                Text(
                   'Información de la Empresa',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).textTheme.bodyLarge?.color,
+                  ),
                 ),
               ],
             ),
@@ -304,15 +345,19 @@ class _CompanyInfoSection extends StatelessWidget {
   }
 }
 
-class _FilesSection extends StatelessWidget {
-  final ConfiguracionController controller;
-  const _FilesSection({required this.controller});
-
+class _AppearanceSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final isDark = Get.isDarkMode;
     return Card(
-      elevation: 2,
-      color: Colors.white,
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Theme.of(context).dividerColor.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -320,15 +365,98 @@ class _FilesSection extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(
-                  Icons.folder_outlined,
-                  color: Color(0xFF005285),
+                Icon(
+                  Icons.brightness_6_outlined,
+                  color: Theme.of(context).colorScheme.primary,
                   size: 20,
                 ),
                 const SizedBox(width: 8),
-                const Text(
+                Text(
+                  'Apariencia',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).textTheme.bodyLarge?.color,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Modo oscuro',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Theme.of(context).textTheme.bodyMedium?.color,
+                    ),
+                  ),
+                ),
+                Switch(
+                  value: isDark,
+                  onChanged: (v) {
+                    final themeService = Get.isRegistered<ThemeService>()
+                        ? Get.find<ThemeService>()
+                        : Get.put(ThemeService());
+                    themeService.toggleDarkMode(v);
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              isDark
+                  ? 'El modo oscuro reduce el brillo y usa fondos oscuros.'
+                  : 'El modo claro usa fondos claros y alto contraste.',
+              style: TextStyle(
+                color: Theme.of(context).textTheme.bodySmall?.color,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FilesSection extends StatelessWidget {
+  final ConfiguracionController controller;
+  const _FilesSection({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Theme.of(context).dividerColor.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.folder_outlined,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
                   'Archivos del Sistema',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).textTheme.bodyLarge?.color,
+                  ),
                 ),
               ],
             ),
@@ -376,8 +504,14 @@ class _StorageSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: 2,
-      color: Colors.white,
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Theme.of(context).dividerColor.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -385,15 +519,19 @@ class _StorageSection extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.cloud_outlined,
-                  color: Color(0xFF005285),
+                  color: Theme.of(context).colorScheme.primary,
                   size: 20,
                 ),
                 const SizedBox(width: 8),
-                const Text(
+                Text(
                   'Almacenamiento',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).textTheme.bodyLarge?.color,
+                  ),
                 ),
               ],
             ),
@@ -451,11 +589,11 @@ class _ConfigTextField extends StatelessWidget {
       readOnly: readonly,
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon, color: const Color(0xFF005285)),
+        prefixIcon: Icon(icon, color: Theme.of(context).colorScheme.primary),
         helperText: helperText,
         border: const OutlineInputBorder(),
-        focusedBorder: const OutlineInputBorder(
-          borderSide: BorderSide(color: Color(0xFF005285)),
+        focusedBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: Theme.of(context).colorScheme.primary),
         ),
       ),
     );
@@ -542,9 +680,9 @@ class _CompactCompanyInfoItem extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Row(
         children: [
@@ -556,18 +694,19 @@ class _CompactCompanyInfoItem extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 10,
-                    color: Colors.grey,
+                    color: Theme.of(context).textTheme.bodySmall?.color,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   value,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
+                    color: Theme.of(context).textTheme.bodyMedium?.color,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -587,8 +726,14 @@ class _ConfigurationSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: 2,
-      color: Colors.white,
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Theme.of(context).dividerColor.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -596,15 +741,19 @@ class _ConfigurationSection extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.settings_outlined,
-                  color: Color(0xFF005285),
+                  color: Theme.of(context).colorScheme.primary,
                   size: 20,
                 ),
                 const SizedBox(width: 8),
-                const Text(
+                Text(
                   'Configuración API',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).textTheme.bodyLarge?.color,
+                  ),
                 ),
               ],
             ),
@@ -788,9 +937,13 @@ class _CompactEnvironmentChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.1) : Colors.grey.shade50,
+          color: isSelected
+              ? color.withOpacity(0.1)
+              : Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: isSelected ? color : Colors.grey.shade300),
+          border: Border.all(
+            color: isSelected ? color : Theme.of(context).dividerColor,
+          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -809,7 +962,9 @@ class _CompactEnvironmentChip extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: isSelected ? color : Colors.black87,
+                color: isSelected
+                    ? color
+                    : Theme.of(context).textTheme.bodyMedium?.color,
               ),
             ),
           ],
@@ -839,17 +994,23 @@ class _CompactFileCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: hasFile ? Colors.green.shade50 : Colors.grey.shade50,
+          color: hasFile
+              ? Colors.green.shade50
+              : Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: hasFile ? Colors.green.shade300 : Colors.grey.shade300,
+            color: hasFile
+                ? Colors.green.shade300
+                : Theme.of(context).dividerColor,
           ),
         ),
         child: Column(
           children: [
             Icon(
               hasFile ? Icons.check_circle : icon,
-              color: hasFile ? Colors.green.shade700 : Colors.grey.shade600,
+              color: hasFile
+                  ? Colors.green.shade700
+                  : Theme.of(context).iconTheme.color,
               size: 24,
             ),
             const SizedBox(height: 8),
@@ -858,7 +1019,9 @@ class _CompactFileCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: hasFile ? Colors.green.shade700 : Colors.grey.shade700,
+                color: hasFile
+                    ? Colors.green.shade700
+                    : Theme.of(context).textTheme.bodyMedium?.color,
               ),
               textAlign: TextAlign.center,
             ),
@@ -867,7 +1030,9 @@ class _CompactFileCard extends StatelessWidget {
               hasFile ? 'Configurado' : 'Configurar URL',
               style: TextStyle(
                 fontSize: 10,
-                color: hasFile ? Colors.green.shade600 : Colors.grey.shade500,
+                color: hasFile
+                    ? Colors.green.shade600
+                    : Theme.of(context).textTheme.bodySmall?.color,
               ),
             ),
           ],
@@ -912,9 +1077,13 @@ class _CompactStorageOption extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.1) : Colors.grey.shade50,
+          color: isSelected
+              ? color.withOpacity(0.1)
+              : Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: isSelected ? color : Colors.grey.shade300),
+          border: Border.all(
+            color: isSelected ? color : Theme.of(context).dividerColor,
+          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -930,7 +1099,9 @@ class _CompactStorageOption extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: isSelected ? color : Colors.black87,
+                color: isSelected
+                    ? color
+                    : Theme.of(context).textTheme.bodyMedium?.color,
               ),
             ),
           ],

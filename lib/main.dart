@@ -11,14 +11,19 @@ import 'routes/app_pages.dart';
 import 'screens/home/home_binding.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/splash/splash_binding.dart';
+import 'services/theme_service.dart';
+import 'services/firebase_queue_service.dart';
+import 'services/queue_processor_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Inicializa GetStorage para usar localStorage/web (persistencia de sesión)
   await GetStorage.init();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Inicializar servicios (singleton se inicializa automáticamente)
+  // El procesador se iniciará cuando el usuario se autentique
+
   // Captura errores de Flutter y los registra
   FlutterError.onError = (FlutterErrorDetails details) {
     LoggerService().error('flutter_error', details.exception, details.stack, {
@@ -37,15 +42,13 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
+    final themeService = ThemeService();
     return GetMaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Facturacion',
-      theme: ThemeData(
-        useMaterial3: true,
-        // Usa Inter como familia tipográfica principal. Si no está instalada,
-        // Flutter usará la fuente del sistema como fallback.
-        fontFamily: 'Inter',
-      ),
+      theme: themeService.lightTheme,
+      darkTheme: themeService.darkTheme,
+      themeMode: themeService.themeMode,
       home: const SplashScreen(),
       initialBinding: SplashBinding(),
       getPages: AppPages.pages,

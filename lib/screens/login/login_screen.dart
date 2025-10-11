@@ -12,17 +12,22 @@ class LoginScreen extends StatelessWidget {
     return GetBuilder<LoginController>(
       init: LoginController(),
       builder: (controller) => Scaffold(
-        backgroundColor: const Color(0xFF22538b),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 480),
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+                ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.15),
+                    color: Theme.of(context).shadowColor.withOpacity(
+                      Theme.of(context).brightness == Brightness.dark ? 0.35 : 0.15,
+                    ),
                     blurRadius: 24,
                     offset: const Offset(0, 12),
                   ),
@@ -44,7 +49,7 @@ class LoginScreen extends StatelessWidget {
                     style: GoogleFonts.inter(
                       fontSize: 24,
                       fontWeight: FontWeight.w700,
-                      color: const Color(0xFF22538b),
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -55,10 +60,22 @@ class LoginScreen extends StatelessWidget {
                       labelText: 'Correo electrónico',
                       prefixIcon: const Icon(Icons.email_outlined),
                       filled: true,
-                      fillColor: Colors.grey.shade100,
+                      fillColor: Theme.of(context).colorScheme.surfaceVariant,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: Theme.of(context).colorScheme.outline.withOpacity(0.35),
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
                       ),
                     ),
                   ),
@@ -79,10 +96,22 @@ class LoginScreen extends StatelessWidget {
                         ),
                       ),
                       filled: true,
-                      fillColor: Colors.grey.shade100,
+                      fillColor: Theme.of(context).colorScheme.surfaceVariant,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: Theme.of(context).colorScheme.outline.withOpacity(0.35),
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
                       ),
                     ),
                   ),
@@ -90,7 +119,7 @@ class LoginScreen extends StatelessWidget {
                   if (controller.errorMessage != null)
                     Text(
                       controller.errorMessage!,
-                      style: const TextStyle(color: Colors.red),
+                      style: TextStyle(color: Theme.of(context).colorScheme.error),
                     ),
                   const SizedBox(height: 18),
                   MouseRegion(
@@ -101,15 +130,15 @@ class LoginScreen extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         decoration: BoxDecoration(
                           color: controller.loading
-                              ? Colors.grey.shade400
-                              : const Color(0xFF22538b),
+                              ? Theme.of(context).disabledColor
+                              : Theme.of(context).colorScheme.primary,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         alignment: Alignment.center,
                         child: Text(
                           controller.loading ? 'Ingresando...' : 'Ingresar',
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onPrimary,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -126,11 +155,14 @@ class LoginScreen extends StatelessWidget {
                           child: MouseRegion(
                             cursor: SystemMouseCursors.click,
                             child: GestureDetector(
-                              onTap: () => Get.toNamed(AppRoutes.REGISTER),
+                              onTap: () {
+                                FocusScope.of(context).unfocus();
+                                Get.toNamed(AppRoutes.REGISTER);
+                              },
                               child: Text(
                                 '¿No tienes cuenta? Regístrate',
                                 style: TextStyle(
-                                  color: const Color(0xFF22538b),
+                                  color: Theme.of(context).colorScheme.primary,
                                   fontWeight: FontWeight.w600,
                                   decoration: TextDecoration.underline,
                                 ),
@@ -149,7 +181,11 @@ class LoginScreen extends StatelessWidget {
                               child: Text(
                                 '¿Olvidaste tu contraseña?',
                                 style: TextStyle(
-                                  color: Colors.grey.shade700,
+                                  color: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.color
+                                      ?.withOpacity(0.7),
                                   fontWeight: FontWeight.w600,
                                   decoration: TextDecoration.underline,
                                 ),

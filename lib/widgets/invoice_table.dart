@@ -1,18 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
-import '../models/invoice.dart';
+import '../models/erp_invoice.dart';
+import '../models/erp_invoice_extensions.dart';
 import '../models/ui_types.dart';
-import '../models/tipo_comprobante.dart';
 import 'status_chip.dart';
 
-typedef InvoiceCallback = void Function(Datum invoice);
+typedef InvoiceCallback = void Function(ERPInvoice invoice);
+typedef SelectionCallback = void Function(String encf);
+typedef SelectAllCallback = void Function();
+typedef IsSelectedCallback = bool Function(String? encf);
 
 class InvoiceTable extends StatelessWidget {
-  final List<Datum> invoices;
+  final List<ERPInvoice> invoices;
   final InvoiceCallback onView;
   final InvoiceCallback onSend;
   final InvoiceCallback onDownload;
+  final SelectionCallback? onToggleSelection;
+  final SelectAllCallback? onToggleSelectAll;
+  final IsSelectedCallback? isSelected;
+  final bool? isAllSelected;
 
   const InvoiceTable({
     super.key,
@@ -20,6 +27,10 @@ class InvoiceTable extends StatelessWidget {
     required this.onView,
     required this.onSend,
     required this.onDownload,
+    this.onToggleSelection,
+    this.onToggleSelectAll,
+    this.isSelected,
+    this.isAllSelected,
   });
 
   @override
@@ -33,17 +44,41 @@ class InvoiceTable extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final sorted = _sortedBySecuencia(invoices);
+        final hasSelection = onToggleSelection != null;
         final columnWidths = <int, TableColumnWidth>{
-          0: const FlexColumnWidth(1.2), // eCF
-          1: const FlexColumnWidth(1.0), // Código Interno
-          2: const FlexColumnWidth(2.0), // Razón Social Comprador
-          3: const FlexColumnWidth(1.0), // (Vacío - era ARS)
-          4: const FlexColumnWidth(1.1), // Monto
-          5: const FlexColumnWidth(1.0), // Fecha
-          6: const FlexColumnWidth(1.2), // RNC
-          7: const FlexColumnWidth(1.2), // Tipo Comprobante
-          8: const FlexColumnWidth(1.0), // Estado
-          9: const FlexColumnWidth(1.0), // Acciones
+          if (hasSelection) 0: const FixedColumnWidth(50), // Checkbox
+          if (hasSelection)
+            1: const FlexColumnWidth(1.2)
+          else
+            0: const FlexColumnWidth(1.2), // eCF
+          if (hasSelection)
+            2: const FlexColumnWidth(1.0)
+          else
+            1: const FlexColumnWidth(1.0), // Código Interno
+          if (hasSelection)
+            3: const FlexColumnWidth(2.0)
+          else
+            2: const FlexColumnWidth(2.0), // Razón Social Comprador
+          if (hasSelection)
+            4: const FlexColumnWidth(1.1)
+          else
+            3: const FlexColumnWidth(1.1), // Monto
+          if (hasSelection)
+            5: const FlexColumnWidth(1.0)
+          else
+            4: const FlexColumnWidth(1.0), // Fecha
+          if (hasSelection)
+            6: const FlexColumnWidth(1.2)
+          else
+            5: const FlexColumnWidth(1.2), // Tipo Comprobante
+          if (hasSelection)
+            7: const FlexColumnWidth(1.0)
+          else
+            6: const FlexColumnWidth(1.0), // Estado
+          if (hasSelection)
+            8: const FlexColumnWidth(1.0)
+          else
+            7: const FlexColumnWidth(1.0), // Acciones
         };
 
         Widget headerCell(String text) => Container(
@@ -77,13 +112,30 @@ class InvoiceTable extends StatelessWidget {
                 children: [
                   TableRow(
                     children: [
-                      headerCell('eCF'),
+                      if (hasSelection)
+                        Container(
+                          color: const Color(0xFF005285),
+                          height: 40,
+                          alignment: Alignment.center,
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          child: Transform.scale(
+                            scale: 0.85,
+                            child: Checkbox(
+                              value: isAllSelected ?? false,
+                              onChanged: (_) => onToggleSelectAll?.call(),
+                              fillColor: WidgetStateProperty.all(Colors.white),
+                              checkColor: const Color(0xFF005285),
+                              materialTapTargetSize:
+                                  MaterialTapTargetSize.shrinkWrap,
+                              visualDensity: VisualDensity.compact,
+                            ),
+                          ),
+                        ),
+                      headerCell('ENCF'),
                       headerCell('Código'),
                       headerCell('Razón Social'),
-                      headerCell(''), // Columna vacía
                       headerCell('Monto'),
                       headerCell('Fecha'),
-                      headerCell('RNC'),
                       headerCell('Tipo'),
                       headerCell('Estado'),
                       headerCell('Acciones'),
@@ -110,16 +162,36 @@ class InvoiceTable extends StatelessWidget {
                       for (final inv in sorted)
                         TableRow(
                           children: [
+                            if (hasSelection)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 10,
+                                ),
+                                child: Transform.scale(
+                                  scale: 0.9,
+                                  child: Checkbox(
+                                    value: isSelected?.call(inv.encf) ?? false,
+                                    onChanged: inv.encf != null
+                                        ? (_) =>
+                                              onToggleSelection?.call(inv.encf!)
+                                        : null,
+                                    materialTapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                    visualDensity: VisualDensity.compact,
+                                  ),
+                                ),
+                              ),
                             bodyCell(Text(_getDocumento(inv))),
-                            bodyCell(Text(_getCodigoInternoComprador(inv))),
+                            bodyCell(Text(_getCodigoInterno(inv))),
                             bodyCell(Text(_getRazonSocialComprador(inv))),
-                            bodyCell(Text('')), // ARS no existe en JSON real
                             bodyCell(Text(_formatMonto(_getMontoTotal(inv)))),
                             bodyCell(Text(_getFechaEmision(inv))),
-                            bodyCell(Text(_getRNCComprador(inv))),
-                            bodyCell(_typeChip(_tipoComprobanteAlias(inv))),
+                            bodyCell(
+                              _typeChip(context, _tipoComprobanteAlias(inv)),
+                            ),
                             bodyCell(StatusChip(status: _statusFrom(inv))),
-                            bodyCell(_ActionsMenu(inv)),
+                            bodyCell(_actionsMenu(inv)),
                           ],
                         ),
                     ],
@@ -133,77 +205,14 @@ class InvoiceTable extends StatelessWidget {
     );
   }
 
-  Widget _cardList(BuildContext context) {
-    final sorted = _sortedBySecuencia(invoices);
-    return ListView.separated(
-      itemCount: sorted.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
-      itemBuilder: (context, index) {
-        final inv = sorted[index];
-        return Card(
-          child: Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      _getDocumento(inv),
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    const Spacer(),
-                    _ActionsMenu(inv),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 16,
-                  runSpacing: 8,
-                  children: [
-                    _kv('Fecha', _getFechaEmision(inv)),
-                    _kv('Comprador', _getRazonSocialComprador(inv)),
-                    _kv('RNC', _getRNCComprador(inv)),
-                    _kv('Comprobante', _tipoComprobanteAlias(inv)),
-                    _kv('Monto', _formatMonto(_getMontoTotal(inv))),
-                    Row(
-                      children: [
-                        const Text('Estado: '),
-                        StatusChip(status: _statusFrom(inv)),
-                      ],
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  List<Datum> _sortedBySecuencia(List<Datum> list) {
-    final copy = List<Datum>.from(list);
+  List<ERPInvoice> _sortedBySecuencia(List<ERPInvoice> list) {
+    final copy = List<ERPInvoice>.from(list);
     copy.sort((a, b) {
       final ai = a.fFacturaSecuencia ?? 0;
       final bi = b.fFacturaSecuencia ?? 0;
       return ai.compareTo(bi);
     });
     return copy;
-  }
-
-  Widget _kv(String k, String v) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text('$k: ', style: const TextStyle(fontWeight: FontWeight.w500)),
-        Text(v),
-      ],
-    );
-  }
-
-  String _formatDate(DateTime d) {
-    return '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
   }
 
   String _formatMonto(String monto) {
@@ -230,7 +239,7 @@ class InvoiceTable extends StatelessWidget {
     return formatter.format(value);
   }
 
-  DisplayStatus _statusFrom(Datum inv) {
+  DisplayStatus _statusFrom(ERPInvoice inv) {
     if (inv.fAnulada == true) return DisplayStatus.rechazada;
     if (inv.fPagada == true) return DisplayStatus.aprobada;
     final enviado =
@@ -241,130 +250,54 @@ class InvoiceTable extends StatelessWidget {
   }
 
   // Métodos para extraer datos del JSON real
-  String _getDocumento(Datum inv) {
-    // Usar ENCF del JSON como documento principal
-    return inv.encf ?? inv.fDocumento ?? '';
+  String _getDocumento(ERPInvoice inv) {
+    // Usar el numeroFactura que ya maneja la lógica de fallback
+    return inv.numeroFactura;
   }
 
-  String _getCodigoInternoComprador(Datum inv) {
-    // Usar CodigoInternoComprador del JSON como ID del paciente
-    return ''; // Este campo no siempre existe, dejarlo vacío
+  String _getCodigoInterno(ERPInvoice inv) {
+    // Usar numerofacturainterna del ERP
+    return inv.numerofacturainterna ?? '';
   }
 
-  String _getRazonSocialComprador(Datum inv) {
-    // Usar RazonSocialComprador del JSON como nombre del paciente
-    return inv.razonsocialcomprador?.toString() ?? '';
+  String _getRazonSocialComprador(ERPInvoice inv) {
+    // Usar clienteNombre que ya maneja la lógica de fallback
+    return inv.clienteNombre;
   }
 
-  String _getMontoTotal(Datum inv) {
-    // Usar MontoTotal del JSON
-    return inv.montototal ?? '';
+  String _getMontoTotal(ERPInvoice inv) {
+    // Usar el formateador integrado de ERPInvoice
+    return inv.formattedTotal;
   }
 
-  String _getFechaEmision(Datum inv) {
-    // Formatear fecha de emisión
-    if (inv.fechaemision != null) {
-      return _formatDate(inv.fechaemision!);
-    }
-    return '';
+  String _getFechaEmision(ERPInvoice inv) {
+    // Usar el formateador integrado de ERPInvoice
+    return inv.formattedFechaEmision;
   }
 
-  String _getRNCComprador(Datum inv) {
-    // Usar RNCComprador del JSON
-    return inv.rnccomprador ?? '';
+  String _tipoComprobanteAlias(ERPInvoice inv) {
+    // Usar el display integrado de ERPInvoice
+    return inv.tipoComprobanteDisplay;
   }
 
-  String _tipoComprobanteAlias(Datum inv) {
-    // Usar ENCF para determinar el tipo
-    final encf = inv.encf ?? inv.fDocumento ?? '';
-    final alias = aliasDesdeDocumento(encf);
-    return alias ?? '';
-  }
-
-  Widget _typeChip(String alias) {
-    final (bg, fg) = switch (alias) {
-      'Consumo' => (
-        const Color(0xFFFFE5D9),
-        const Color(0xFF6B4E4E),
-      ), // Rosa pastel melocotón
-      'Crédito Fiscal' => (
-        const Color(0xFFD9F8FF),
-        const Color(0xFF2E5D6E),
-      ), // Azul pastel agua
-      'Nota Crédito' => (
-        const Color(0xFFFFD9E8),
-        const Color(0xFF6B3B53),
-      ), // Rosado empolvado
-      'Nota Débito' => (
-        const Color(0xFFE5FFD9),
-        const Color(0xFF3F6B42),
-      ), // Verde menta
-      'Gastos Menores' => (
-        const Color(0xFFF9F5D7),
-        const Color(0xFF6E6232),
-      ), // Amarillo crema pastel
-      'Factura Gubernamental' => (
-        const Color(0xFFE6E5FF),
-        const Color(0xFF403B6B),
-      ), // Lila suave
-      'Factura Regímenes Especiales' => (
-        const Color(0xFFFFEED9),
-        const Color(0xFF6B533B),
-      ), // Durazno claro
-      'Pagos al Exterior' => (
-        const Color(0xFFE5F0FF),
-        const Color(0xFF2E4A6B),
-      ), // Azul cielo
-      'Regímenes Especiales' => (
-        const Color(0xFFEFFFD9),
-        const Color(0xFF4A6B2E),
-      ), // Verde lima
-      'Exportación' => (
-        const Color(0xFFFFF0D9),
-        const Color(0xFF6B5C2E),
-      ), // Amarillo suave
-      'Pagos Electrónicos' => (
-        const Color(0xFFD9E8FF),
-        const Color(0xFF2E4A6B),
-      ), // Azul bebé
-      'Donaciones' => (
-        const Color(0xFFF9D9FF),
-        const Color(0xFF5B2E6B),
-      ), // Lila rosado
-      'Bonos o Incentivos' => (
-        const Color(0xFFD9FFF7),
-        const Color(0xFF2E6B5A),
-      ), // Verde agua
-      'Venta por Terceros' => (
-        const Color(0xFFE5E9FF),
-        const Color(0xFF343A6B),
-      ), // Azul lavanda
-      'Gasto Gubernamental' => (
-        const Color(0xFFFFF7D9),
-        const Color(0xFF6B5D2E),
-      ), // Amarillo arena
-      'Compras Gubernamentales' => (
-        const Color(0xFFE9FFF0),
-        const Color(0xFF3C6B4A),
-      ), // Verde menta suave
-      _ => (
-        const Color(0xFFF0F4F6),
-        const Color(0xFF4C4C4C),
-      ), // Gris claro por defecto
-    };
-
+  Widget _typeChip(BuildContext context, String alias) {
+    final cs = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: bg,
+        color: cs.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: cs.outlineVariant),
       ),
-      child: Text(alias, style: TextStyle(color: fg, fontSize: 12)),
+      child: Text(
+        alias,
+        style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
+      ),
     );
   }
 
-  Widget _ActionsMenu(Datum invoice) {
+  Widget _actionsMenu(ERPInvoice invoice) {
     Widget btn(
       IconData icon,
       String tooltip,
@@ -397,13 +330,6 @@ class InvoiceTable extends StatelessWidget {
           'Enviar',
           const Color(0xFF0072CE),
           () => onSend(invoice),
-        ),
-        const SizedBox(width: 6),
-        btn(
-          FontAwesomeIcons.download,
-          'Descargar',
-          const Color(0xFF005285),
-          () => onDownload(invoice),
         ),
       ],
     );

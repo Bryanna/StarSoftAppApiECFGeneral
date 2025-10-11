@@ -20,11 +20,11 @@ class SplashScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               FadeIn(
-                duration: const Duration(seconds: 5),
+                duration: const Duration(seconds: 4),
                 child: Image.asset('assets/logo.png', height: 400),
               ),
               FadeInLeftBig(
-                duration: const Duration(seconds: 6),
+                duration: const Duration(seconds: 4),
                 child: Text(
                   'Facturador Electrónico',
                   style: GoogleFonts.inter(fontSize: 30, color: Colors.white),

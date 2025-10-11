@@ -38,21 +38,18 @@ class InvoiceModel {
 
 class Datum {
   int? fFacturaSecuencia;
-  String? fDocumento;
   String? version;
   String? tipoecf;
   String? encf;
-  DateTime? fechavencimientosecuencia;
-  String? indicadornotacredito;
+  Fechavencimientosecuencia? fechavencimientosecuencia;
   dynamic indicadorenviodiferido;
   String? indicadormontogravado;
+  String? indicadornotacredito;
   String? tipoingresos;
   String? tipopago;
-  dynamic fechalimitepago;
-  dynamic terminopago;
-  int? formapago1;
+  String? formapago1;
   String? montopago1;
-  int? formapago2;
+  String? formapago2;
   String? montopago2;
   dynamic formapago3;
   dynamic montopago3;
@@ -69,6 +66,8 @@ class Datum {
   String? bancopago;
   dynamic fechadesde;
   dynamic fechahasta;
+  dynamic fechalimitepago;
+  dynamic terminopago;
   dynamic totalpaginas;
   String? rncemisor;
   Razonsocialemisor? razonsocialemisor;
@@ -78,7 +77,7 @@ class Datum {
   String? municipio;
   String? provincia;
   Telefono? telefonoemisor1;
-  Telefono? telefonoemisor2;
+  String? telefonoemisor2;
   dynamic telefonoemisor3;
   String? correoemisor;
   Website? website;
@@ -89,7 +88,7 @@ class Datum {
   Zonaventa? zonaventa;
   dynamic rutaventa;
   String? informacionadicionalemisor;
-  DateTime? fechaemision;
+  Fechaemision? fechaemision;
   String? rnccomprador;
   String? identificadorextranjero;
   Razonsocialcomprador? razonsocialcomprador;
@@ -99,11 +98,11 @@ class Datum {
   String? municipiocomprador;
   String? provinciacomprador;
   dynamic paiscomprador;
-  DateTime? fechaentrega;
+  Fechaentrega? fechaentrega;
   String? contactoentrega;
   dynamic direccionentrega;
   Telefono? telefonoadicional;
-  DateTime? fechaordencompra;
+  Fechaordencompra? fechaordencompra;
   String? numeroordencompra;
   String? codigointernocomprador;
   dynamic responsablepago;
@@ -220,79 +219,26 @@ class Datum {
   dynamic montoimpuestoselectivoconsumoadvaloremotramoneda4;
   dynamic otrosimpuestoadicionalesotramoneda4;
   String? montototalotramoneda;
-  DateTime? fechaHoraFirma;
-  String? ncfmodificado;
-  DateTime? fechancfmodificado;
-  int? codigomodificacion;
-  String? razonmodificacion;
-  String? codigoSeguridad;
+  dynamic fechahorafirma;
+  dynamic codigoseguridad;
   String? linkOriginal;
   String? tipoComprobante;
-  Tablatelefonoemisor? tablatelefonoemisor;
-  List<TablaFormasPago>? tablaFormasPago;
-  dynamic fHora;
-  dynamic fPacienteId;
-  dynamic fPacienteNombre;
-  dynamic fPacienteCedula;
-  dynamic fEdad;
-  dynamic fMedicoId;
-  dynamic fMedicoNombre;
-  dynamic fDiagnostico;
-  dynamic fMedicoEmergencia;
-  dynamic fArsId;
-  dynamic fArsNombre;
-  dynamic fAutorizacionArs;
-  String? fMontoCobertura;
-  String? fDiferenciaPagar;
-  String? fSubtotal;
-  String? fDescuento;
-  String? fBaseImponible;
-  String? fMontoExento;
-  String? fItbis;
-  String? fTotal;
-  int? fMoneda;
-  String? fTasa;
-  String? fEfectivo;
-  String? fCheque;
-  String? fTarjetaDebito;
-  String? fTarjetaCredito;
-  String? fTransferencia;
-  int? fDiasCredito;
-  dynamic fFechaVencimiento;
-  String? fBalance;
-  bool? fPagada;
-  int? fTipoNcf;
-  dynamic fNcf;
-  dynamic fFechaVenceNcf;
-  String? fRncEmisor;
-  String? fRncReceptor;
-  String? fReceptorNombre;
-  String? fReceptorEmail;
-  String? fReceptorTelefono;
-  String? fDireccionReceptor;
-  int? fHechopor;
-  int? fCajero;
-  int? fVendedor;
-  dynamic fObservacion;
-  bool? fPosteada;
-  bool? fAnulada;
-  DateTime? fCreadoEn;
-  DateTime? fModificadoEn;
+  dynamic tablatelefonoemisor;
+  dynamic tablaformaspago;
+  dynamic detalleFactura;
+  String? tipoTabEnvioFactura;
 
   Datum({
     this.fFacturaSecuencia,
-    this.fDocumento,
     this.version,
     this.tipoecf,
     this.encf,
     this.fechavencimientosecuencia,
-    this.indicadornotacredito,
     this.indicadorenviodiferido,
     this.indicadormontogravado,
+    this.indicadornotacredito,
     this.tipoingresos,
     this.tipopago,
-    this.fechalimitepago,
-    this.terminopago,
     this.formapago1,
     this.montopago1,
     this.formapago2,
@@ -312,6 +258,8 @@ class Datum {
     this.bancopago,
     this.fechadesde,
     this.fechahasta,
+    this.fechalimitepago,
+    this.terminopago,
     this.totalpaginas,
     this.rncemisor,
     this.razonsocialemisor,
@@ -463,82 +411,28 @@ class Datum {
     this.montoimpuestoselectivoconsumoadvaloremotramoneda4,
     this.otrosimpuestoadicionalesotramoneda4,
     this.montototalotramoneda,
-    this.fechaHoraFirma,
-    this.ncfmodificado,
-    this.fechancfmodificado,
-    this.codigomodificacion,
-    this.razonmodificacion,
-    this.codigoSeguridad,
+    this.fechahorafirma,
+    this.codigoseguridad,
     this.linkOriginal,
     this.tipoComprobante,
     this.tablatelefonoemisor,
-    this.tablaFormasPago,
-    this.fHora,
-    this.fPacienteId,
-    this.fPacienteNombre,
-    this.fPacienteCedula,
-    this.fEdad,
-    this.fMedicoId,
-    this.fMedicoNombre,
-    this.fDiagnostico,
-    this.fMedicoEmergencia,
-    this.fArsId,
-    this.fArsNombre,
-    this.fAutorizacionArs,
-    this.fMontoCobertura,
-    this.fDiferenciaPagar,
-    this.fSubtotal,
-    this.fDescuento,
-    this.fBaseImponible,
-    this.fMontoExento,
-    this.fItbis,
-    this.fTotal,
-    this.fMoneda,
-    this.fTasa,
-    this.fEfectivo,
-    this.fCheque,
-    this.fTarjetaDebito,
-    this.fTarjetaCredito,
-    this.fTransferencia,
-    this.fDiasCredito,
-    this.fFechaVencimiento,
-    this.fBalance,
-    this.fPagada,
-    this.fTipoNcf,
-    this.fNcf,
-    this.fFechaVenceNcf,
-    this.fRncEmisor,
-    this.fRncReceptor,
-    this.fReceptorNombre,
-    this.fReceptorEmail,
-    this.fReceptorTelefono,
-    this.fDireccionReceptor,
-    this.fHechopor,
-    this.fCajero,
-    this.fVendedor,
-    this.fObservacion,
-    this.fPosteada,
-    this.fAnulada,
-    this.fCreadoEn,
-    this.fModificadoEn,
+    this.tablaformaspago,
+    this.detalleFactura,
+    this.tipoTabEnvioFactura,
   });
 
   factory Datum.fromJson(Map<String, dynamic> json) => Datum(
     fFacturaSecuencia: json["f_factura_secuencia"],
-    fDocumento: json["f_documento"],
     version: json["version"],
     tipoecf: json["tipoecf"],
     encf: json["encf"],
-    fechavencimientosecuencia: json["fechavencimientosecuencia"] == null
-        ? null
-        : DateTime.parse(json["fechavencimientosecuencia"]),
-    indicadornotacredito: json["indicadornotacredito"],
+    fechavencimientosecuencia:
+        fechavencimientosecuenciaValues.map[json["fechavencimientosecuencia"]]!,
     indicadorenviodiferido: json["indicadorenviodiferido"],
     indicadormontogravado: json["indicadormontogravado"],
+    indicadornotacredito: json["indicadornotacredito"],
     tipoingresos: json["tipoingresos"],
     tipopago: json["tipopago"],
-    fechalimitepago: json["fechalimitepago"],
-    terminopago: json["terminopago"],
     formapago1: json["formapago1"],
     montopago1: json["montopago1"],
     formapago2: json["formapago2"],
@@ -558,48 +452,44 @@ class Datum {
     bancopago: json["bancopago"],
     fechadesde: json["fechadesde"],
     fechahasta: json["fechahasta"],
+    fechalimitepago: json["fechalimitepago"],
+    terminopago: json["terminopago"],
     totalpaginas: json["totalpaginas"],
     rncemisor: json["rncemisor"],
-    razonsocialemisor: razonsocialemisorValues.map[json["razonsocialemisor"]],
-    nombrecomercial: nombrecomercialValues.map[json["nombrecomercial"]],
+    razonsocialemisor: razonsocialemisorValues.map[json["razonsocialemisor"]]!,
+    nombrecomercial: nombrecomercialValues.map[json["nombrecomercial"]]!,
     sucursal: json["sucursal"],
-    direccionemisor: direccionemisorValues.map[json["direccionemisor"]],
+    direccionemisor: direccionemisorValues.map[json["direccionemisor"]]!,
     municipio: json["municipio"],
     provincia: json["provincia"],
-    telefonoemisor1: telefonoValues.map[json["telefonoemisor1"]],
-    telefonoemisor2: telefonoValues.map[json["telefonoemisor2"]],
+    telefonoemisor1: telefonoValues.map[json["telefonoemisor1"]]!,
+    telefonoemisor2: json["telefonoemisor2"],
     telefonoemisor3: json["telefonoemisor3"],
     correoemisor: json["correoemisor"],
-    website: websiteValues.map[json["website"]],
+    website: websiteValues.map[json["website"]]!,
     actividadeconomica: json["actividadeconomica"],
-    codigovendedor: codigovendedorValues.map[json["codigovendedor"]],
-    numerofacturainterna: numeroValues.map[json["numerofacturainterna"]],
-    numeropedidointerno: numeroValues.map[json["numeropedidointerno"]],
-    zonaventa: zonaventaValues.map[json["zonaventa"]],
+    codigovendedor: codigovendedorValues.map[json["codigovendedor"]]!,
+    numerofacturainterna: numeroValues.map[json["numerofacturainterna"]]!,
+    numeropedidointerno: numeroValues.map[json["numeropedidointerno"]]!,
+    zonaventa: zonaventaValues.map[json["zonaventa"]]!,
     rutaventa: json["rutaventa"],
     informacionadicionalemisor: json["informacionadicionalemisor"],
-    fechaemision: json["fechaemision"] == null
-        ? null
-        : DateTime.parse(json["fechaemision"]),
+    fechaemision: fechaemisionValues.map[json["fechaemision"]]!,
     rnccomprador: json["rnccomprador"],
     identificadorextranjero: json["identificadorextranjero"],
     razonsocialcomprador:
-        razonsocialcompradorValues.map[json["razonsocialcomprador"]],
-    contactocomprador: contactocompradorValues.map[json["contactocomprador"]],
-    correocomprador: correocompradorValues.map[json["correocomprador"]],
+        razonsocialcompradorValues.map[json["razonsocialcomprador"]]!,
+    contactocomprador: contactocompradorValues.map[json["contactocomprador"]]!,
+    correocomprador: correocompradorValues.map[json["correocomprador"]]!,
     direccioncomprador: json["direccioncomprador"],
     municipiocomprador: json["municipiocomprador"],
     provinciacomprador: json["provinciacomprador"],
     paiscomprador: json["paiscomprador"],
-    fechaentrega: json["fechaentrega"] == null
-        ? null
-        : DateTime.parse(json["fechaentrega"]),
+    fechaentrega: fechaentregaValues.map[json["fechaentrega"]]!,
     contactoentrega: json["contactoentrega"],
     direccionentrega: json["direccionentrega"],
-    telefonoadicional: telefonoValues.map[json["telefonoadicional"]],
-    fechaordencompra: json["fechaordencompra"] == null
-        ? null
-        : DateTime.parse(json["fechaordencompra"]),
+    telefonoadicional: telefonoValues.map[json["telefonoadicional"]]!,
+    fechaordencompra: fechaordencompraValues.map[json["fechaordencompra"]]!,
     numeroordencompra: json["numeroordencompra"],
     codigointernocomprador: json["codigointernocomprador"],
     responsablepago: json["responsablepago"],
@@ -737,94 +627,28 @@ class Datum {
     otrosimpuestoadicionalesotramoneda4:
         json["otrosimpuestoadicionalesotramoneda4"],
     montototalotramoneda: json["montototalotramoneda"],
-    fechaHoraFirma: json["FechaHoraFirma"] == null
-        ? null
-        : DateTime.parse(json["FechaHoraFirma"]),
-    ncfmodificado: json["ncfmodificado"],
-    fechancfmodificado: json["fechancfmodificado"] == null
-        ? null
-        : DateTime.parse(json["fechancfmodificado"]),
-    codigomodificacion: json["codigomodificacion"],
-    razonmodificacion: json["razonmodificacion"],
-    codigoSeguridad: json["CodigoSeguridad"],
+    fechahorafirma: json["fechahorafirma"],
+    codigoseguridad: json["codigoseguridad"],
     linkOriginal: json["link_original"],
     tipoComprobante: json["tipo_comprobante"],
-    tablatelefonoemisor: json["tablatelefonoemisor"] == null
-        ? null
-        : Tablatelefonoemisor.fromJson(json["tablatelefonoemisor"]),
-    tablaFormasPago: json["tablaFormasPago"] == null
-        ? []
-        : List<TablaFormasPago>.from(
-            json["tablaFormasPago"]!.map((x) => TablaFormasPago.fromJson(x)),
-          ),
-    fHora: json["f_hora"],
-    fPacienteId: json["f_paciente_id"],
-    fPacienteNombre: json["f_paciente_nombre"],
-    fPacienteCedula: json["f_paciente_cedula"],
-    fEdad: json["f_edad"],
-    fMedicoId: json["f_medico_id"],
-    fMedicoNombre: json["f_medico_nombre"],
-    fDiagnostico: json["f_diagnostico"],
-    fMedicoEmergencia: json["f_medico_emergencia"],
-    fArsId: json["f_ars_id"],
-    fArsNombre: json["f_ars_nombre"],
-    fAutorizacionArs: json["f_autorizacion_ars"],
-    fMontoCobertura: json["f_monto_cobertura"],
-    fDiferenciaPagar: json["f_diferencia_pagar"],
-    fSubtotal: json["f_subtotal"],
-    fDescuento: json["f_descuento"],
-    fBaseImponible: json["f_base_imponible"],
-    fMontoExento: json["f_monto_exento"],
-    fItbis: json["f_itbis"],
-    fTotal: json["f_total"],
-    fMoneda: json["f_moneda"],
-    fTasa: json["f_tasa"],
-    fEfectivo: json["f_efectivo"],
-    fCheque: json["f_cheque"],
-    fTarjetaDebito: json["f_tarjeta_debito"],
-    fTarjetaCredito: json["f_tarjeta_credito"],
-    fTransferencia: json["f_transferencia"],
-    fDiasCredito: json["f_dias_credito"],
-    fFechaVencimiento: json["f_fecha_vencimiento"],
-    fBalance: json["f_balance"],
-    fPagada: json["f_pagada"],
-    fTipoNcf: json["f_tipo_ncf"],
-    fNcf: json["f_ncf"],
-    fFechaVenceNcf: json["f_fecha_vence_ncf"],
-    fRncEmisor: json["f_rnc_emisor"],
-    fRncReceptor: json["f_rnc_receptor"],
-    fReceptorNombre: json["f_receptor_nombre"],
-    fReceptorEmail: json["f_receptor_email"],
-    fReceptorTelefono: json["f_receptor_telefono"],
-    fDireccionReceptor: json["f_direccion_receptor"],
-    fHechopor: json["f_hechopor"],
-    fCajero: json["f_cajero"],
-    fVendedor: json["f_vendedor"],
-    fObservacion: json["f_observacion"],
-    fPosteada: json["f_posteada"],
-    fAnulada: json["f_anulada"],
-    fCreadoEn: json["f_creado_en"] == null
-        ? null
-        : DateTime.parse(json["f_creado_en"]),
-    fModificadoEn: json["f_modificado_en"] == null
-        ? null
-        : DateTime.parse(json["f_modificado_en"]),
+    tablatelefonoemisor: json["tablatelefonoemisor"],
+    tablaformaspago: json["tablaformaspago"],
+    detalleFactura: json["detalle_factura"],
+    tipoTabEnvioFactura: json["tipo_tab_envio_factura"],
   );
 
   Map<String, dynamic> toJson() => {
     "f_factura_secuencia": fFacturaSecuencia,
-    "f_documento": fDocumento,
     "version": version,
     "tipoecf": tipoecf,
     "encf": encf,
-    "fechavencimientosecuencia": fechavencimientosecuencia?.toIso8601String(),
-    "indicadornotacredito": indicadornotacredito,
+    "fechavencimientosecuencia":
+        fechavencimientosecuenciaValues.reverse[fechavencimientosecuencia],
     "indicadorenviodiferido": indicadorenviodiferido,
     "indicadormontogravado": indicadormontogravado,
+    "indicadornotacredito": indicadornotacredito,
     "tipoingresos": tipoingresos,
     "tipopago": tipopago,
-    "fechalimitepago": fechalimitepago,
-    "terminopago": terminopago,
     "formapago1": formapago1,
     "montopago1": montopago1,
     "formapago2": formapago2,
@@ -844,6 +668,8 @@ class Datum {
     "bancopago": bancopago,
     "fechadesde": fechadesde,
     "fechahasta": fechahasta,
+    "fechalimitepago": fechalimitepago,
+    "terminopago": terminopago,
     "totalpaginas": totalpaginas,
     "rncemisor": rncemisor,
     "razonsocialemisor": razonsocialemisorValues.reverse[razonsocialemisor],
@@ -853,7 +679,7 @@ class Datum {
     "municipio": municipio,
     "provincia": provincia,
     "telefonoemisor1": telefonoValues.reverse[telefonoemisor1],
-    "telefonoemisor2": telefonoValues.reverse[telefonoemisor2],
+    "telefonoemisor2": telefonoemisor2,
     "telefonoemisor3": telefonoemisor3,
     "correoemisor": correoemisor,
     "website": websiteValues.reverse[website],
@@ -864,7 +690,7 @@ class Datum {
     "zonaventa": zonaventaValues.reverse[zonaventa],
     "rutaventa": rutaventa,
     "informacionadicionalemisor": informacionadicionalemisor,
-    "fechaemision": fechaemision?.toIso8601String(),
+    "fechaemision": fechaemisionValues.reverse[fechaemision],
     "rnccomprador": rnccomprador,
     "identificadorextranjero": identificadorextranjero,
     "razonsocialcomprador":
@@ -875,11 +701,11 @@ class Datum {
     "municipiocomprador": municipiocomprador,
     "provinciacomprador": provinciacomprador,
     "paiscomprador": paiscomprador,
-    "fechaentrega": fechaentrega?.toIso8601String(),
+    "fechaentrega": fechaentregaValues.reverse[fechaentrega],
     "contactoentrega": contactoentrega,
     "direccionentrega": direccionentrega,
     "telefonoadicional": telefonoValues.reverse[telefonoadicional],
-    "fechaordencompra": fechaordencompra?.toIso8601String(),
+    "fechaordencompra": fechaordencompraValues.reverse[fechaordencompra],
     "numeroordencompra": numeroordencompra,
     "codigointernocomprador": codigointernocomprador,
     "responsablepago": responsablepago,
@@ -1013,66 +839,14 @@ class Datum {
         montoimpuestoselectivoconsumoadvaloremotramoneda4,
     "otrosimpuestoadicionalesotramoneda4": otrosimpuestoadicionalesotramoneda4,
     "montototalotramoneda": montototalotramoneda,
-    "FechaHoraFirma": fechaHoraFirma?.toIso8601String(),
-    "ncfmodificado": ncfmodificado,
-    "fechancfmodificado": fechancfmodificado?.toIso8601String(),
-    "codigomodificacion": codigomodificacion,
-    "razonmodificacion": razonmodificacion,
-    "CodigoSeguridad": codigoSeguridad,
+    "fechahorafirma": fechahorafirma,
+    "codigoseguridad": codigoseguridad,
     "link_original": linkOriginal,
     "tipo_comprobante": tipoComprobante,
-    "tablatelefonoemisor": tablatelefonoemisor?.toJson(),
-    "tablaFormasPago": tablaFormasPago == null
-        ? []
-        : List<dynamic>.from(tablaFormasPago!.map((x) => x.toJson())),
-    "f_hora": fHora,
-    "f_paciente_id": fPacienteId,
-    "f_paciente_nombre": fPacienteNombre,
-    "f_paciente_cedula": fPacienteCedula,
-    "f_edad": fEdad,
-    "f_medico_id": fMedicoId,
-    "f_medico_nombre": fMedicoNombre,
-    "f_diagnostico": fDiagnostico,
-    "f_medico_emergencia": fMedicoEmergencia,
-    "f_ars_id": fArsId,
-    "f_ars_nombre": fArsNombre,
-    "f_autorizacion_ars": fAutorizacionArs,
-    "f_monto_cobertura": fMontoCobertura,
-    "f_diferencia_pagar": fDiferenciaPagar,
-    "f_subtotal": fSubtotal,
-    "f_descuento": fDescuento,
-    "f_base_imponible": fBaseImponible,
-    "f_monto_exento": fMontoExento,
-    "f_itbis": fItbis,
-    "f_total": fTotal,
-    "f_moneda": fMoneda,
-    "f_tasa": fTasa,
-    "f_efectivo": fEfectivo,
-    "f_cheque": fCheque,
-    "f_tarjeta_debito": fTarjetaDebito,
-    "f_tarjeta_credito": fTarjetaCredito,
-    "f_transferencia": fTransferencia,
-    "f_dias_credito": fDiasCredito,
-    "f_fecha_vencimiento": fFechaVencimiento,
-    "f_balance": fBalance,
-    "f_pagada": fPagada,
-    "f_tipo_ncf": fTipoNcf,
-    "f_ncf": fNcf,
-    "f_fecha_vence_ncf": fFechaVenceNcf,
-    "f_rnc_emisor": fRncEmisor,
-    "f_rnc_receptor": fRncReceptor,
-    "f_receptor_nombre": fReceptorNombre,
-    "f_receptor_email": fReceptorEmail,
-    "f_receptor_telefono": fReceptorTelefono,
-    "f_direccion_receptor": fDireccionReceptor,
-    "f_hechopor": fHechopor,
-    "f_cajero": fCajero,
-    "f_vendedor": fVendedor,
-    "f_observacion": fObservacion,
-    "f_posteada": fPosteada,
-    "f_anulada": fAnulada,
-    "f_creado_en": fCreadoEn?.toIso8601String(),
-    "f_modificado_en": fModificadoEn?.toIso8601String(),
+    "tablatelefonoemisor": tablatelefonoemisor,
+    "tablaformaspago": tablaformaspago,
+    "detalle_factura": detalleFactura,
+    "tipo_tab_envio_factura": tipoTabEnvioFactura,
   };
 }
 
@@ -1112,6 +886,35 @@ final direccionemisorValues = EnumValues({
       Direccionemisor.AVE_ISABEL_AGUIAR_NO_269_ZONA_INDUSTRIAL_DE_HERRERA,
   "DOCUMENTOS ELECTRONICOS DE 02":
       Direccionemisor.DOCUMENTOS_ELECTRONICOS_DE_02,
+});
+
+enum Fechaemision { THE_1122018, THE_142020, THE_2122018, THE_242020 }
+
+final fechaemisionValues = EnumValues({
+  "1/12/2018": Fechaemision.THE_1122018,
+  "1/4/2020": Fechaemision.THE_142020,
+  "2/12/2018": Fechaemision.THE_2122018,
+  "2/4/2020": Fechaemision.THE_242020,
+});
+
+enum Fechaentrega { THE_10102020, THE_11112020 }
+
+final fechaentregaValues = EnumValues({
+  "10/10/2020": Fechaentrega.THE_10102020,
+  "11/11/2020": Fechaentrega.THE_11112020,
+});
+
+enum Fechaordencompra { THE_10112018, THE_10112020 }
+
+final fechaordencompraValues = EnumValues({
+  "10/11/2018": Fechaordencompra.THE_10112018,
+  "10/11/2020": Fechaordencompra.THE_10112020,
+});
+
+enum Fechavencimientosecuencia { THE_31122025 }
+
+final fechavencimientosecuenciaValues = EnumValues({
+  "31/12/2025": Fechavencimientosecuencia.THE_31122025,
 });
 
 enum Nombrecomercial { DOCUMENTOS_ELECTRONICOS, DOCUMENTOS_ELECTRONICOS_DE_02 }
@@ -1160,53 +963,9 @@ final razonsocialemisorValues = EnumValues({
           .DOCUMENTOS_ELECTRONICOS_PRUEBA_FACTURA_DE_CONSUMO_MENOR_250_MIL,
 });
 
-class TablaFormasPago {
-  String? formaPago;
-  double? montoPago;
+enum Telefono { THE_8094727676 }
 
-  TablaFormasPago({this.formaPago, this.montoPago});
-
-  factory TablaFormasPago.fromJson(Map<String, dynamic> json) =>
-      TablaFormasPago(
-        formaPago: json["FormaPago"],
-        montoPago: json["MontoPago"]?.toDouble(),
-      );
-
-  Map<String, dynamic> toJson() => {
-    "FormaPago": formaPago,
-    "MontoPago": montoPago,
-  };
-}
-
-class Tablatelefonoemisor {
-  List<Telefono>? telefonoEmisor;
-
-  Tablatelefonoemisor({this.telefonoEmisor});
-
-  factory Tablatelefonoemisor.fromJson(Map<String, dynamic> json) =>
-      Tablatelefonoemisor(
-        telefonoEmisor: json["TelefonoEmisor"] == null
-            ? []
-            : List<Telefono>.from(
-                json["TelefonoEmisor"]!.map((x) => telefonoValues.map[x]!),
-              ),
-      );
-
-  Map<String, dynamic> toJson() => {
-    "TelefonoEmisor": telefonoEmisor == null
-        ? []
-        : List<dynamic>.from(
-            telefonoEmisor!.map((x) => telefonoValues.reverse[x]),
-          ),
-  };
-}
-
-enum Telefono { THE_8094727676, THE_8094911918 }
-
-final telefonoValues = EnumValues({
-  "809-472-7676": Telefono.THE_8094727676,
-  "809-491-1918": Telefono.THE_8094911918,
-});
+final telefonoValues = EnumValues({"809-472-7676": Telefono.THE_8094727676});
 
 enum Website { WWW_FACTURAELECTRONICA_COM }
 

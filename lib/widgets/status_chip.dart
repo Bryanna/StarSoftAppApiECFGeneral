@@ -7,11 +7,12 @@ class StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (bg, label) = switch (status) {
-      DisplayStatus.pendiente => (const Color(0xFFf0f4f6), 'Pendiente'),
-      DisplayStatus.enviado => (const Color(0xFF0072CE), 'Enviado'),
-      DisplayStatus.aprobada => (const Color(0xFF005285), 'Aprobada'),
-      DisplayStatus.rechazada => (const Color(0xFFdd1416), 'Rechazada'),
+    final cs = Theme.of(context).colorScheme;
+    final (bg, fg, label) = switch (status) {
+      DisplayStatus.pendiente => (cs.surfaceVariant, cs.onSurfaceVariant, 'Pendiente'),
+      DisplayStatus.enviado => (cs.secondaryContainer, cs.onSecondaryContainer, 'Enviado'),
+      DisplayStatus.aprobada => (cs.primaryContainer, cs.onPrimaryContainer, 'Aprobada'),
+      DisplayStatus.rechazada => (cs.errorContainer, cs.onErrorContainer, 'Rechazada'),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -19,11 +20,12 @@ class StatusChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
       ),
       child: Text(
         label,
         style: TextStyle(
-          color: label == 'Pendiente' ? Colors.black : Colors.white,
+          color: fg,
           fontSize: 12,
         ),
       ),

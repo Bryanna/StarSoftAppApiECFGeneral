@@ -25,6 +25,7 @@ class ProfileController extends GetxController {
   String? errorMessage;
 
   // Form to create new user (admin only)
+  final newNameCtrl = TextEditingController();
   final newEmailCtrl = TextEditingController();
   final newPasswordCtrl = TextEditingController();
   String newRole = 'user';
@@ -134,6 +135,7 @@ class ProfileController extends GetxController {
   }
 
   Future<void> createUser({
+    required String name,
     required String email,
     required String password,
     required String role,
@@ -163,6 +165,7 @@ class ProfileController extends GetxController {
       await _db.set('users/$uid', {
         'uid': uid,
         'email': email.trim(),
+        'nombre': name.trim(),
         'companyRnc': companyRnc,
         'companyName': companyName,
         'role': role,
@@ -174,6 +177,7 @@ class ProfileController extends GetxController {
         'companyRnc': companyRnc,
       });
       // Clear form
+      newNameCtrl.clear();
       newEmailCtrl.clear();
       newPasswordCtrl.clear();
       newRole = 'user';
@@ -356,6 +360,7 @@ class ProfileController extends GetxController {
 
   @override
   void onClose() {
+    newNameCtrl.dispose();
     newEmailCtrl.dispose();
     newPasswordCtrl.dispose();
     super.onClose();

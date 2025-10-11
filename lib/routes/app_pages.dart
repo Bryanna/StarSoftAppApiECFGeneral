@@ -13,6 +13,7 @@ import '../screens/profile/profile_controller.dart';
 import '../screens/profile/profile_screen.dart';
 import '../screens/configuracion/configuracion_binding.dart';
 import '../screens/configuracion/configuracion_screen.dart';
+import '../screens/queue/queue_screen_simple.dart';
 import 'app_routes.dart';
 
 class AppPages {
@@ -51,5 +52,6 @@ class AppPages {
       page: () => const ConfiguracionScreen(),
       binding: ConfiguracionBinding(),
     ),
+    GetPage(name: AppRoutes.QUEUE, page: () => const QueueScreenSimple()),
   ];
 }

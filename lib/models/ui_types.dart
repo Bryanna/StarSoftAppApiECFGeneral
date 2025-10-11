@@ -1,4 +1,5 @@
 enum InvoiceCategory {
+  todos,
   pacientes,
   ars,
   notasCredito,

@@ -13,19 +13,26 @@ class ProfileScreen extends StatelessWidget {
       init: ProfileController(),
       builder: (c) {
         return Scaffold(
-          backgroundColor: Colors.grey.shade50,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
 
           appBar: AppBar(
-            backgroundColor: const Color(0xFF005285),
+            backgroundColor:
+                Theme.of(context).appBarTheme.backgroundColor ??
+                const Color(0xFF005285),
             centerTitle: false,
             elevation: 0,
-            title: const Text(
-              'Mi Perfil',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-              ),
+            title: Row(
+              children: [
+                Image.asset('assets/logo.png', height: 50),
+                const Text(
+                  'Mi Perfil',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
             iconTheme: const IconThemeData(color: Colors.white),
           ),
@@ -56,8 +63,14 @@ class _ErrorState extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Card(
-          elevation: 2,
-          color: Colors.white,
+          elevation: 4,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(
+              color: Theme.of(context).dividerColor.withOpacity(0.2),
+              width: 1,
+            ),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(32),
             child: Column(
@@ -69,14 +82,20 @@ class _ErrorState extends StatelessWidget {
                   size: 48,
                 ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'Error',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).textTheme.bodyLarge?.color,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   message,
-                  style: const TextStyle(color: Colors.grey),
+                  style: TextStyle(
+                    color: Theme.of(context).textTheme.bodySmall?.color,
+                  ),
                   textAlign: TextAlign.center,
                 ),
               ],
@@ -112,9 +131,13 @@ class _ProfileContent extends StatelessWidget {
               // Banner del logo de la empresa
               _CompanyBanner(),
               const SizedBox(height: 20),
-              const Text(
+              Text(
                 'Información del Usuario',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).textTheme.bodyLarge?.color,
+                ),
               ),
               const SizedBox(height: 20),
 
@@ -297,10 +320,10 @@ class _CompanyBannerState extends State<_CompanyBanner> {
                     },
                     errorBuilder: (context, error, stackTrace) {
                       return Container(
-                        color: Colors.grey.shade100,
-                        child: const Icon(
+                        color: Theme.of(context).colorScheme.surface,
+                        child: Icon(
                           Icons.business,
-                          color: Color(0xFF005285),
+                          color: Theme.of(context).colorScheme.primary,
                           size: 40,
                         ),
                       );
@@ -421,8 +444,14 @@ class _ProfileHeader extends StatelessWidget {
     final initials = _getInitials(email);
 
     return Card(
-      elevation: 2,
-      color: Colors.white,
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Theme.of(context).dividerColor.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -431,9 +460,9 @@ class _ProfileHeader extends StatelessWidget {
             Container(
               width: 80,
               height: 80,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Color(0xFF005285),
+                color: Theme.of(context).colorScheme.primary,
               ),
               child: Center(
                 child: Text(
@@ -449,7 +478,11 @@ class _ProfileHeader extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               email,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).textTheme.bodyLarge?.color,
+              ),
             ),
             const SizedBox(height: 8),
             Row(
@@ -464,23 +497,25 @@ class _ProfileHeader extends StatelessWidget {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.grey.shade300),
+                      border: Border.all(color: Theme.of(context).dividerColor),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.business,
                           size: 14,
-                          color: Colors.grey,
+                          color: Theme.of(context).textTheme.bodySmall?.color,
                         ),
                         const SizedBox(width: 4),
                         Text(
                           company,
-                          style: const TextStyle(
-                            color: Colors.grey,
+                          style: TextStyle(
+                            color: Theme.of(context).textTheme.bodySmall?.color,
                             fontSize: 12,
                           ),
                         ),
@@ -604,12 +639,12 @@ class _ActionButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.grey.shade300),
+          border: Border.all(color: Theme.of(context).dividerColor),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
+              color: Theme.of(context).shadowColor.withOpacity(0.1),
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),
@@ -650,8 +685,14 @@ class _UserInfoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: 2,
-      color: Colors.white,
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Theme.of(context).dividerColor.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -659,15 +700,19 @@ class _UserInfoCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.person_outline,
-                  color: Color(0xFF005285),
+                  color: Theme.of(context).colorScheme.primary,
                   size: 20,
                 ),
                 const SizedBox(width: 8),
-                const Text(
+                Text(
                   'Información Personal',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).textTheme.bodyLarge?.color,
+                  ),
                 ),
               ],
             ),
@@ -715,10 +760,14 @@ class _InfoItem extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: const Color(0xFF005285).withOpacity(0.1),
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(icon, size: 16, color: const Color(0xFF005285)),
+          child: Icon(
+            icon,
+            size: 16,
+            color: Theme.of(context).colorScheme.primary,
+          ),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -758,8 +807,14 @@ class _AdminPanel extends StatelessWidget {
     return Column(
       children: [
         Card(
-          elevation: 2,
-          color: Colors.white,
+          elevation: 4,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(
+              color: Theme.of(context).dividerColor.withOpacity(0.2),
+              width: 1,
+            ),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -767,17 +822,18 @@ class _AdminPanel extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.admin_panel_settings_outlined,
-                      color: Color(0xFF005285),
+                      color: Theme.of(context).colorScheme.primary,
                       size: 20,
                     ),
                     const SizedBox(width: 8),
-                    const Text(
+                    Text(
                       'Panel de Administración',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
+                        color: Theme.of(context).textTheme.bodyLarge?.color,
                       ),
                     ),
                   ],
@@ -790,8 +846,14 @@ class _AdminPanel extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         Card(
-          elevation: 2,
-          color: Colors.white,
+          elevation: 4,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(
+              color: Theme.of(context).dividerColor.withOpacity(0.2),
+              width: 1,
+            ),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -802,17 +864,18 @@ class _AdminPanel extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.group_outlined,
-                          color: Color(0xFF005285),
+                          color: Theme.of(context).colorScheme.primary,
                           size: 20,
                         ),
                         const SizedBox(width: 8),
-                        const Text(
+                        Text(
                           'Usuarios de la Empresa',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w600,
+                            color: Theme.of(context).textTheme.bodyLarge?.color,
                           ),
                         ),
                       ],
@@ -1080,9 +1143,9 @@ class _UserListItem extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Row(
         children: [
@@ -1137,15 +1200,22 @@ class _UserListItem extends StatelessWidget {
             ),
           ),
           PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert, color: Colors.grey),
+            icon: Icon(
+              Icons.more_vert,
+              color: Theme.of(context).iconTheme.color,
+            ),
             itemBuilder: (context) => [
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'edit',
                 child: Row(
                   children: [
-                    Icon(Icons.edit, color: Colors.grey, size: 16),
-                    SizedBox(width: 8),
-                    Text('Editar'),
+                    Icon(
+                      Icons.edit,
+                      color: Theme.of(context).iconTheme.color,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 8),
+                    const Text('Editar'),
                   ],
                 ),
               ),
@@ -1202,13 +1272,17 @@ class _EmptyState extends StatelessWidget {
           Icon(
             icon,
             size: 48,
-            color: isError ? Colors.redAccent : Colors.grey.shade400,
+            color: isError
+                ? Colors.redAccent
+                : Theme.of(context).iconTheme.color?.withOpacity(0.4),
           ),
           const SizedBox(height: 16),
           Text(
             message,
             style: TextStyle(
-              color: isError ? Colors.redAccent : Colors.grey,
+              color: isError
+                  ? Colors.redAccent
+                  : Theme.of(context).textTheme.bodySmall?.color,
               fontSize: 14,
             ),
             textAlign: TextAlign.center,
@@ -1226,7 +1300,15 @@ void _showCreateUserDialog(BuildContext context, ProfileController controller) {
     context: context,
     builder: (ctx) {
       return Dialog(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).dialogBackgroundColor,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: Theme.of(context).dividerColor.withOpacity(0.2),
+            width: 1,
+          ),
+        ),
+        elevation: 8,
         insetPadding: const EdgeInsets.all(24),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 500),
@@ -1238,22 +1320,32 @@ void _showCreateUserDialog(BuildContext context, ProfileController controller) {
               children: [
                 Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.person_add_outlined,
-                      color: Color(0xFF005285),
+                      color: Theme.of(context).colorScheme.primary,
                       size: 24,
                     ),
                     const SizedBox(width: 12),
-                    const Text(
+                    Text(
                       'Crear Nuevo Usuario',
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w600,
+                        color: Theme.of(context).textTheme.bodyLarge?.color,
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 24),
+                TextField(
+                  controller: controller.newNameCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Nombre Completo',
+                    prefixIcon: Icon(Icons.person_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
                 TextField(
                   controller: controller.newEmailCtrl,
                   keyboardType: TextInputType.emailAddress,
@@ -1324,6 +1416,8 @@ void _showCreateUserDialog(BuildContext context, ProfileController controller) {
                           onTap: c.loading
                               ? null
                               : () async {
+                                  final name = controller.newNameCtrl.text
+                                      .trim();
                                   final email = controller.newEmailCtrl.text
                                       .trim();
                                   final password =
@@ -1331,6 +1425,17 @@ void _showCreateUserDialog(BuildContext context, ProfileController controller) {
                                   final role = controller.newRole;
 
                                   // Validación básica
+                                  if (name.isEmpty) {
+                                    Get.snackbar(
+                                      'Error',
+                                      'El nombre es requerido',
+                                      snackPosition: SnackPosition.BOTTOM,
+                                      backgroundColor: Colors.red.shade600,
+                                      colorText: Colors.white,
+                                    );
+                                    return;
+                                  }
+
                                   if (email.isEmpty) {
                                     Get.snackbar(
                                       'Error',
@@ -1368,6 +1473,7 @@ void _showCreateUserDialog(BuildContext context, ProfileController controller) {
 
                                   Navigator.of(context).pop();
                                   await controller.createUser(
+                                    name: name,
                                     email: email,
                                     password: password,
                                     role: role,
@@ -1449,20 +1555,34 @@ void _showDeleteUserDialog(
     context: context,
     builder: (ctx) {
       return AlertDialog(
-        backgroundColor: Colors.white,
-        title: const Text('Confirmar Eliminación'),
+        backgroundColor: Theme.of(context).dialogBackgroundColor,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: Theme.of(context).dividerColor.withOpacity(0.2),
+            width: 1,
+          ),
+        ),
+        elevation: 8,
+        title: Text(
+          'Confirmar Eliminación',
+          style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
+        ),
         content: Text(
           '¿Estás seguro de que deseas eliminar al usuario "$email"?\n\nEsta acción no se puede deshacer.',
+          style: TextStyle(
+            color: Theme.of(context).textTheme.bodyMedium?.color,
+          ),
         ),
         actions: [
           GestureDetector(
             onTap: () => Navigator.of(context).pop(),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: const Text(
+              child: Text(
                 'Cancelar',
                 style: TextStyle(
-                  color: Colors.grey,
+                  color: Theme.of(context).textTheme.bodySmall?.color,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -1506,7 +1626,15 @@ void _showAboutDialog(BuildContext context) {
     context: context,
     builder: (ctx) {
       return Dialog(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).dialogBackgroundColor,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: Theme.of(context).dividerColor.withOpacity(0.2),
+            width: 1,
+          ),
+        ),
+        elevation: 8,
         insetPadding: const EdgeInsets.all(24),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 500),
@@ -1523,7 +1651,7 @@ void _showAboutDialog(BuildContext context) {
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.grey.withOpacity(0.2),
+                        color: Theme.of(context).shadowColor.withOpacity(0.2),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),
@@ -1562,16 +1690,18 @@ void _showAboutDialog(BuildContext context) {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade200),
+                    border: Border.all(color: Theme.of(context).dividerColor),
                   ),
-                  child: const Text(
+                  child: Text(
                     'Nuestro sistema de facturación electrónica está diseñado para simplificar y automatizar el proceso de emisión de facturas, cumpliendo con todas las normativas fiscales vigentes. Ofrecemos una solución integral que permite a las empresas gestionar sus documentos fiscales de manera eficiente y segura.',
                     style: TextStyle(
                       fontSize: 14,
                       height: 1.5,
-                      color: Colors.black87,
+                      color: Theme.of(context).textTheme.bodyMedium?.color,
                     ),
                     textAlign: TextAlign.justify,
                   ),
@@ -1663,20 +1793,23 @@ class _ContactItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, size: 16, color: const Color(0xFF005285)),
+        Icon(icon, size: 16, color: Theme.of(context).colorScheme.primary),
         const SizedBox(width: 8),
         Text(
           '$label: ',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: Colors.grey,
+            color: Theme.of(context).textTheme.bodySmall?.color,
           ),
         ),
         Expanded(
           child: Text(
             value,
-            style: const TextStyle(fontSize: 14, color: Colors.black87),
+            style: TextStyle(
+              fontSize: 14,
+              color: Theme.of(context).textTheme.bodyMedium?.color,
+            ),
           ),
         ),
       ],
@@ -1696,7 +1829,15 @@ void _showUserConfigDialog(BuildContext context, ProfileController controller) {
     context: context,
     builder: (ctx) {
       return Dialog(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).dialogBackgroundColor,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: Theme.of(context).dividerColor.withOpacity(0.2),
+            width: 1,
+          ),
+        ),
+        elevation: 8,
         insetPadding: const EdgeInsets.all(24),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 500),
@@ -1708,17 +1849,18 @@ void _showUserConfigDialog(BuildContext context, ProfileController controller) {
               children: [
                 Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.settings_outlined,
-                      color: Color(0xFF005285),
+                      color: Theme.of(context).colorScheme.primary,
                       size: 24,
                     ),
                     const SizedBox(width: 12),
-                    const Text(
+                    Text(
                       'Configuración de Usuario',
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w600,
+                        color: Theme.of(context).textTheme.bodyLarge?.color,
                       ),
                     ),
                   ],
@@ -1730,19 +1872,21 @@ void _showUserConfigDialog(BuildContext context, ProfileController controller) {
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade200),
+                    border: Border.all(color: Theme.of(context).dividerColor),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Información de la Cuenta',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF005285),
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -1789,21 +1933,25 @@ void _showUserConfigDialog(BuildContext context, ProfileController controller) {
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF005285).withOpacity(0.05),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withOpacity(0.05),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: const Color(0xFF005285).withOpacity(0.2),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.primary.withOpacity(0.2),
                     ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Opciones Disponibles',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF005285),
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -1975,7 +2123,15 @@ void _showChangePasswordDialog(
       return StatefulBuilder(
         builder: (context, setState) {
           return Dialog(
-            backgroundColor: Colors.white,
+            backgroundColor: Theme.of(context).dialogBackgroundColor,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(
+                color: Theme.of(context).dividerColor.withOpacity(0.2),
+                width: 1,
+              ),
+            ),
+            elevation: 8,
             insetPadding: const EdgeInsets.all(24),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 450),
@@ -1987,9 +2143,9 @@ void _showChangePasswordDialog(
                   children: [
                     Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.lock_outline,
-                          color: Color(0xFF005285),
+                          color: Theme.of(context).colorScheme.primary,
                           size: 24,
                         ),
                         const SizedBox(width: 12),

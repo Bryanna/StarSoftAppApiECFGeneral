@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
@@ -5,14 +6,26 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
 import '../models/invoice.dart';
+import '../models/invoice_extensions.dart';
+import '../models/tipo_comprobante.dart';
 import '../services/company_config_service.dart';
 import '../services/fake_data_service.dart';
+import '../services/user_service.dart';
 
 class EnhancedInvoicePdfService {
   static Future<Uint8List> buildPdf(
     PdfPageFormat format,
-    Datum? invoice,
+    dynamic invoice,
   ) async {
+    // DEBUG: Confirmar que estamos usando la versión actualizada
+    debugPrint('');
+    debugPrint('🚀🚀🚀 ENHANCED PDF SERVICE - VERSION UPDATED 🚀🚀🚀');
+    debugPrint('🚀 This should show RNC/CED instead of Record');
+    debugPrint(
+      '🚀 This should use tipo_factura_titulo instead of CONTADO - LABORATORIO',
+    );
+    debugPrint('');
+
     final doc = pw.Document();
 
     // Obtener configuración de la empresa
@@ -30,6 +43,9 @@ class EnhancedInvoicePdfService {
 
     // Pre-cargar datos de productos si es fake data
     final productRows = await _getProductRows(invoiceData, useFakeData);
+
+    // Pre-cargar el nombre del usuario logueado
+    final userName = await UserService.getUserDisplayName();
 
     // Cargar logo de la empresa
     pw.ImageProvider? logo;
@@ -52,6 +68,9 @@ class EnhancedInvoicePdfService {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
+              // Título pequeño con el tipo de comprobante
+              // _buildComprobanteTitle(invoiceData),
+              // pw.SizedBox(height: 6),
               // Header con logo y datos de la empresa
               _buildHeader(logo, companyData, invoiceData),
 
@@ -63,7 +82,7 @@ class EnhancedInvoicePdfService {
               pw.Spacer(),
 
               // Footer con QR y totales
-              _buildFooter(invoiceData, useFakeData),
+              _buildFooterSync(invoiceData, useFakeData, userName),
             ],
           );
         },
@@ -128,7 +147,7 @@ class EnhancedInvoicePdfService {
                 style: pw.TextStyle(fontSize: 10),
               ),
               pw.Text(
-                'CONTADO - LABORATORIO',
+                _getTipoFacturaTitulo(invoiceData),
                 style: pw.TextStyle(
                   fontSize: 10,
                   fontWeight: pw.FontWeight.bold,
@@ -151,7 +170,7 @@ class EnhancedInvoicePdfService {
                 child: pw.Text(
                   _getInvoiceTitle(invoiceData),
                   style: pw.TextStyle(
-                    fontSize: 16,
+                    fontSize: 12,
                     fontWeight: pw.FontWeight.bold,
                     color: PdfColor.fromInt(0xFF005285),
                   ),
@@ -220,7 +239,7 @@ class EnhancedInvoicePdfService {
                   pw.SizedBox(height: 3),
                   _buildCompactInfoRow('Médico', _getDoctor(invoiceData)),
                   pw.SizedBox(height: 3),
-                  _buildCompactInfoRow('Record', _getRecord(invoiceData)),
+                  _buildCompactInfoRow('RNC/CED', _getRecord(invoiceData)),
                   pw.SizedBox(height: 3),
                   _buildCompactInfoRow('Nombre', _getPatientName(invoiceData)),
                 ],
@@ -230,6 +249,63 @@ class EnhancedInvoicePdfService {
         ),
       ],
     );
+  }
+
+  // Título de comprobante arriba del todo, centrado y pequeño
+  static pw.Widget _buildComprobanteTitle(dynamic invoiceData) {
+    final doc = _extractDocumento(invoiceData);
+    final code = _extractTipoCodeFromDoc(doc);
+    final desc = _getTipoComprobanteDescripcion(invoiceData);
+    final text = (code?.isNotEmpty ?? false)
+        ? 'eCF ${code!} — ${desc ?? ''}'
+        : (desc ?? '');
+
+    if (text.isEmpty) return pw.SizedBox.shrink();
+
+    return pw.Container(
+      alignment: pw.Alignment.center,
+      padding: const pw.EdgeInsets.only(bottom: 2),
+      child: pw.Text(
+        text,
+        style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
+      ),
+    );
+  }
+
+  // Extraer ENCF/FDocumento del invoice
+  static String? _extractDocumento(dynamic invoiceData) {
+    try {
+      if (invoiceData is Datum) {
+        return invoiceData.fDocumento ?? invoiceData.encf;
+      }
+      if (invoiceData is Map<String, dynamic>) {
+        return (invoiceData['ENCF'] as String?) ??
+            (invoiceData['FDocumento'] as String?) ??
+            (invoiceData['NumeroFacturaInterna'] as String?);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  // Obtener la descripción o alias desde tipo_comprobante.dart
+  static String? _getTipoComprobanteDescripcion(dynamic invoiceData) {
+    final doc = _extractDocumento(invoiceData);
+    if (doc == null || doc.isEmpty) return null;
+    final desc = descripcionDesdeDocumento(doc);
+    if (desc != null) return desc;
+    final alias = aliasDesdeDocumento(doc);
+    if (alias != null && alias.isNotEmpty) return alias;
+    return null;
+  }
+
+  // Intentar extraer NN de patrones E NN o inicio de cadena
+  static String? _extractTipoCodeFromDoc(String? doc) {
+    if (doc == null || doc.isEmpty) return null;
+    final m = RegExp(r'[Ee]\s*(\d{2})').firstMatch(doc);
+    if (m != null) return m.group(1);
+    final m2 = RegExp(r'^(\d{2})').firstMatch(doc);
+    if (m2 != null) return m2.group(1);
+    return null;
   }
 
   static pw.Widget _buildProductsTableSync(
@@ -258,32 +334,46 @@ class EnhancedInvoicePdfService {
         // Filas de productos (pre-cargadas)
         ...productRows,
 
-        // Fila de totales
+        // Fila de totales - debe coincidir con las columnas del header
         pw.Container(
           decoration: pw.BoxDecoration(
             border: pw.Border.all(color: PdfColors.grey400, width: 0.5),
           ),
           child: pw.Row(
             children: [
+              // ID (flex: 1)
+              _buildTableCell('', flex: 1, bold: true),
+              // Descripción (flex: 4) - aquí va el conteo de items
               _buildTableCell(
-                'Items: ${_getItemCount(invoiceData)}',
-                flex: 6,
+                'Items: ${productRows.length}',
+                flex: 4,
                 bold: true,
+                align: pw.TextAlign.left,
               ),
+              // Cantidad (flex: 1)
+              _buildTableCell('', flex: 1, bold: true),
+              // Precio (flex: 1)
+              _buildTableCell('', flex: 1, bold: true),
+              // Importe (flex: 1) - suma total de todos los items
               _buildTableCell(
-                _getTotalAmount(invoiceData, useFakeData),
+                _getTotalImporte(invoiceData),
                 flex: 1,
                 bold: true,
+                align: pw.TextAlign.right,
               ),
+              // Cobertura (flex: 1) - descuento/cobertura aplicada
               _buildTableCell(
-                _getCoverageAmount(useFakeData),
+                _getCoverageAmount(invoiceData),
                 flex: 1,
                 bold: true,
+                align: pw.TextAlign.right,
               ),
+              // Neto / Pagar (flex: 1) - importe total menos cobertura total
               _buildTableCell(
                 _getNetAmount(invoiceData, useFakeData),
                 flex: 1,
                 bold: true,
+                align: pw.TextAlign.right,
               ),
             ],
           ),
@@ -296,87 +386,217 @@ class EnhancedInvoicePdfService {
     dynamic invoiceData,
     bool useFakeData,
   ) async {
-    if (useFakeData) {
-      try {
-        // Usar datos reales de productos desde el JSON
-        final products = await FakeDataService.getProductDetails();
-        final selectedProducts = products
-            .take(7)
-            .toList(); // Tomar los primeros 7
+    debugPrint('');
+    debugPrint('🔍 [EnhancedInvoicePdfService] _getProductRows called');
+    debugPrint('🔍 invoiceData type: ${invoiceData.runtimeType}');
+    debugPrint('🔍 useFakeData: $useFakeData');
 
-        return selectedProducts.map((product) {
-          final precio = _formatMoney(
-            double.tryParse(product['precio'] ?? '0') ?? 0,
-          );
-          final cantidad = product['cantidad'] ?? '1.0';
-          final monto = _formatMoney(
-            double.tryParse(product['monto'] ?? '0') ?? 0,
-          );
+    // Primero, intentar extraer detalles reales del campo detalle_factura
+    try {
+      if (invoiceData is Map<String, dynamic>) {
+        debugPrint('🔍 Processing Map invoiceData');
+        debugPrint('🔍 Available keys: ${invoiceData.keys.toList()}');
 
-          // Calcular cobertura (80% del monto para simular ARS)
-          final montoNum = double.tryParse(product['monto'] ?? '0') ?? 0;
-          final cobertura = _formatMoney(montoNum * 0.8);
-          final neto = _formatMoney(montoNum * 0.2);
+        // Buscar el campo detalle_factura en el Map
+        final detalleFacturaJson =
+            invoiceData['DetalleFactura'] as String? ??
+            invoiceData['detalleFactura'] as String? ??
+            invoiceData['detalle_factura'] as String?;
 
-          return _buildProductRow(
-            product['id'] ?? '1',
-            product['nombre'] ?? 'Producto',
-            cantidad,
-            precio,
-            monto,
-            cobertura,
-            neto,
-          );
-        }).toList();
-      } catch (e) {
         debugPrint(
-          '[EnhancedInvoicePdfService] Error loading product data: $e',
+          '🔍 DetalleFactura field: ${detalleFacturaJson?.substring(0, detalleFacturaJson.length > 100 ? 100 : detalleFacturaJson.length) ?? 'NULL'}...',
         );
-        // Fallback a datos básicos
-        return [
-          _buildProductRow(
-            '1500',
-            'ANTIGENO CARCINOEMBRIOGENICO (CEA)',
-            '1.0',
-            '427.34',
-            '427.34',
-            '341.87',
-            '85.47',
-          ),
-          _buildProductRow(
-            '377',
-            'ANTI HCV (HEPATITI C)',
-            '1.0',
-            '427.34',
-            '427.34',
-            '341.87',
-            '85.47',
-          ),
-          _buildProductRow(
-            '288',
-            'ANTI HIV',
-            '1.0',
-            '388.85',
-            '388.85',
-            '319.08',
-            '79.77',
-          ),
-        ];
+
+        if (detalleFacturaJson != null && detalleFacturaJson.isNotEmpty) {
+          debugPrint(
+            '[EnhancedInvoicePdfService] ✓ Found detalle_factura JSON: ${detalleFacturaJson.substring(0, detalleFacturaJson.length > 200 ? 200 : detalleFacturaJson.length)}...',
+          );
+
+          try {
+            final List<dynamic> detalles = json.decode(detalleFacturaJson);
+            debugPrint(
+              '[EnhancedInvoicePdfService] ✓ Parsed ${detalles.length} invoice details - RETURNING REAL DETAILS',
+            );
+
+            // Debug de totales
+            double totalImporte = 0.0;
+            double totalCobertura = 0.0;
+            for (final detalle in detalles) {
+              final total =
+                  double.tryParse(detalle['total']?.toString() ?? '0') ?? 0.0;
+              final cobertura =
+                  double.tryParse(detalle['cobertura']?.toString() ?? '0') ??
+                  0.0;
+              totalImporte += total;
+              totalCobertura += cobertura;
+            }
+            final neto = totalImporte - totalCobertura;
+
+            debugPrint('💰 TOTALES DEBUG:');
+            debugPrint(
+              '💰 Total Importe (suma items): ${_formatMoney(totalImporte)}',
+            );
+            debugPrint(
+              '💰 Total Cobertura (suma coberturas): ${_formatMoney(totalCobertura)}',
+            );
+            debugPrint(
+              '💰 Neto a Pagar (importe - cobertura): ${_formatMoney(neto)}',
+            );
+
+            final rows = detalles.asMap().entries.map((entry) {
+              final index = entry.key;
+              final detalle = entry.value as Map<String, dynamic>;
+
+              final referencia =
+                  detalle['referencia']?.toString() ?? (index + 1).toString();
+              final descripcion =
+                  detalle['descripcion']?.toString() ?? 'Servicio médico';
+              final cantidad = detalle['cantidad']?.toString() ?? '1.00';
+              final precioValue =
+                  double.tryParse(detalle['precio']?.toString() ?? '0') ?? 0;
+              final totalValue =
+                  double.tryParse(detalle['total']?.toString() ?? '0') ?? 0;
+              final coberturaValue =
+                  double.tryParse(detalle['cobertura']?.toString() ?? '0') ?? 0;
+              final netoValue = totalValue - coberturaValue;
+
+              final precio = _formatMoney(precioValue);
+              final total = _formatMoney(totalValue);
+              final cobertura = _formatMoney(coberturaValue);
+              final neto = _formatMoney(netoValue);
+
+              debugPrint(
+                '[EnhancedInvoicePdfService] ✓ Creating row ${index + 1}: [$referencia] $descripcion',
+              );
+              debugPrint(
+                '  💰 Precio: $precio, Total: $total, Cobertura: $cobertura, Neto: $neto',
+              );
+
+              return _buildProductRow(
+                referencia, // Usar referencia como ID
+                descripcion,
+                cantidad,
+                precio,
+                total, // Importe
+                cobertura, // Cobertura del item
+                neto, // Neto = total - cobertura
+              );
+            }).toList();
+
+            debugPrint(
+              '[EnhancedInvoicePdfService] ✓ RETURNING ${rows.length} REAL DETAIL ROWS',
+            );
+            return rows;
+          } catch (e) {
+            debugPrint(
+              '[EnhancedInvoicePdfService] ✗ Error parsing detalle_factura JSON: $e',
+            );
+          }
+        } else {
+          debugPrint('❌ No detalle_factura found or empty');
+          debugPrint(
+            '❌ DetalleFactura value: ${invoiceData['DetalleFactura']}',
+          );
+          debugPrint(
+            '❌ detalleFactura value: ${invoiceData['detalleFactura']}',
+          );
+          debugPrint(
+            '❌ detalle_factura value: ${invoiceData['detalle_factura']}',
+          );
+        }
       }
-    } else {
-      // Usar datos reales del invoice si están disponibles
-      return [
-        _buildProductRow(
-          '1',
-          _getProductDescription(invoiceData),
-          '1.0',
-          _getUnitPrice(invoiceData),
-          _getTotalPrice(invoiceData),
-          '0.00',
-          _getTotalPrice(invoiceData),
-        ),
-      ];
+
+      // Fallback para datos fake
+      if (invoiceData is Datum) {
+        final items = await FakeDataService.getProductDetailsForInvoice(
+          invoiceData,
+        );
+        if (items.isNotEmpty) {
+          return items.map((product) {
+            final precio = _formatMoney(
+              double.tryParse(product['precio'] ?? '0') ?? 0,
+            );
+            final cantidad = product['cantidad']?.toString() ?? '1.00';
+            final monto = _formatMoney(
+              double.tryParse(product['monto'] ?? '0') ?? 0,
+            );
+            final id = (product['linea'] ?? product['id'] ?? '1').toString();
+            return _buildProductRow(
+              id,
+              product['nombre'] ?? 'Producto/Servicio',
+              cantidad,
+              precio,
+              monto,
+              '0.00',
+              monto,
+            );
+          }).toList();
+        }
+      }
+    } catch (e) {
+      debugPrint(
+        '[EnhancedInvoicePdfService] Error extracting per-invoice items: $e',
+      );
     }
+
+    // Si el invoice es un Map (escenario JSON), extraer directamente
+    if (invoiceData is Map) {
+      final List<pw.Widget> rows = [];
+      for (int i = 1; i <= 50; i++) {
+        final nombreKey = 'NombreItem[$i]';
+        final cantidadKey = 'CantidadItem[$i]';
+        final precioKey = 'PrecioUnitarioItem[$i]';
+        final montoKey = 'MontoItem[$i]';
+        if (invoiceData.containsKey(nombreKey) &&
+            invoiceData[nombreKey] != null &&
+            invoiceData[nombreKey] != '#e') {
+          final precio = _formatMoney(
+            double.tryParse(invoiceData[precioKey] ?? '0') ?? 0,
+          );
+          final cantidad = (invoiceData[cantidadKey] ?? '1.00').toString();
+          final monto = _formatMoney(
+            double.tryParse(invoiceData[montoKey] ?? '0') ?? 0,
+          );
+          final lineaKey = 'NumeroLinea[$i]';
+          final id = (invoiceData[lineaKey] ?? i.toString()).toString();
+          rows.add(
+            _buildProductRow(
+              id,
+              invoiceData[nombreKey] ?? 'Producto/Servicio',
+              cantidad,
+              precio,
+              monto,
+              '0.00',
+              monto,
+            ),
+          );
+        }
+      }
+      if (rows.isNotEmpty) return rows;
+    }
+
+    // Fallback: NO usar catálogo general para evitar confusión entre facturas.
+    // Si no hay ítems reales, muestra una sola línea con el total de la factura.
+
+    // Último recurso: una sola línea con el total
+    debugPrint('');
+    debugPrint('❌❌❌ FALLBACK: Using generic single row');
+    debugPrint('❌ This means no real details were found');
+    debugPrint(
+      '❌ Check if you are using FAKE DATA or ERP is not sending detalle_factura',
+    );
+    debugPrint('');
+    return [
+      _buildProductRow(
+        '1',
+        _getProductDescription(invoiceData),
+        '1.0',
+        _getUnitPrice(invoiceData),
+        _getTotalPrice(invoiceData),
+        '0.00',
+        _getTotalPrice(invoiceData),
+      ),
+    ];
   }
 
   static pw.Widget _buildProductRow(
@@ -394,40 +614,53 @@ class EnhancedInvoicePdfService {
       ),
       child: pw.Row(
         children: [
-          _buildTableCell(id, flex: 1),
-          _buildTableCell(description, flex: 4),
-          _buildTableCell(quantity, flex: 1),
-          _buildTableCell(price, flex: 1),
-          _buildTableCell(amount, flex: 1),
-          _buildTableCell(coverage, flex: 1),
-          _buildTableCell(net, flex: 1),
+          _buildTableCell(id, flex: 1, align: pw.TextAlign.center),
+          _buildTableCell(description, flex: 4, align: pw.TextAlign.left),
+          _buildTableCell(quantity, flex: 1, align: pw.TextAlign.right),
+          _buildTableCell(price, flex: 1, align: pw.TextAlign.right),
+          _buildTableCell(amount, flex: 1, align: pw.TextAlign.right),
+          _buildTableCell(coverage, flex: 1, align: pw.TextAlign.right),
+          _buildTableCell(net, flex: 1, align: pw.TextAlign.right),
         ],
       ),
     );
   }
 
-  static pw.Widget _buildFooter(dynamic invoiceData, bool useFakeData) {
+  static pw.Widget _buildFooterSync(
+    dynamic invoiceData,
+    bool useFakeData,
+    String userName,
+  ) {
+    final qrUrl = _getQRUrl(invoiceData);
+
+    // Debug: mostrar si se encontró URL para QR
+    if (qrUrl.isNotEmpty) {
+      debugPrint('[EnhancedInvoicePdfService] QR URL encontrado: $qrUrl');
+    } else {
+      debugPrint('[EnhancedInvoicePdfService] No se encontró URL para QR');
+    }
+
     return pw.Row(
       crossAxisAlignment: pw.CrossAxisAlignment.end,
       children: [
-        // QR Code (lado izquierdo)
+        // QR Code (lado izquierdo) - solo si hay URL
         pw.Expanded(
           flex: 1,
           child: pw.Column(
             children: [
-              pw.Container(
-                width: 100,
-                height: 100,
-                decoration: pw.BoxDecoration(
-                  border: pw.Border.all(color: PdfColors.grey400),
-                ),
-                child: pw.Center(
-                  child: pw.Text(
-                    'QR CODE',
-                    style: pw.TextStyle(fontSize: 10, color: PdfColors.grey600),
+              // QR Code o espacio vacío
+              if (qrUrl.isNotEmpty)
+                pw.Container(
+                  width: 100,
+                  height: 100,
+                  child: pw.BarcodeWidget(
+                    barcode: pw.Barcode.qrCode(),
+                    data: qrUrl,
                   ),
-                ),
-              ),
+                )
+              else
+                pw.SizedBox(width: 100, height: 100),
+
               pw.SizedBox(height: 8),
               pw.Text(
                 'Código de Seguridad: ${_getSecurityCode(invoiceData, useFakeData)}',
@@ -438,7 +671,7 @@ class EnhancedInvoicePdfService {
                 style: pw.TextStyle(fontSize: 8),
               ),
               pw.Text('Página 1/1', style: pw.TextStyle(fontSize: 8)),
-              pw.Text('Ing Abel Medrano', style: pw.TextStyle(fontSize: 8)),
+              pw.Text(userName, style: pw.TextStyle(fontSize: 8)),
             ],
           ),
         ),
@@ -479,7 +712,7 @@ class EnhancedInvoicePdfService {
                     ),
                     _buildTotalRow(
                       'Cobertura',
-                      _getCoverageAmount(useFakeData),
+                      _getCoverageAmount(invoiceData),
                       PdfColor.fromInt(0xFF2196F3),
                     ),
                     _buildTotalRow(
@@ -546,6 +779,7 @@ class EnhancedInvoicePdfService {
     String text, {
     int flex = 1,
     bool bold = false,
+    pw.TextAlign align = pw.TextAlign.center,
   }) {
     return pw.Expanded(
       flex: flex,
@@ -557,7 +791,7 @@ class EnhancedInvoicePdfService {
             fontSize: 6,
             fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal,
           ),
-          textAlign: pw.TextAlign.center,
+          textAlign: align,
           overflow: pw.TextOverflow.clip,
         ),
       ),
@@ -610,38 +844,74 @@ class EnhancedInvoicePdfService {
   // Métodos para extraer datos del JSON real
   static String _getInvoiceNumber(dynamic invoice) {
     // Usar NumeroFacturaInterna del JSON
-    if (invoice is Map) return invoice['NumeroFacturaInterna'] ?? '';
-    return invoice?.fDocumento ?? '';
+    if (invoice is Map) {
+      final numeroFactura = invoice['NumeroFacturaInterna'] ?? '';
+      debugPrint('📄 PDF Invoice Number: $numeroFactura');
+      return numeroFactura;
+    }
+    if (invoice is Datum) return invoice.fDocumento ?? '';
+    return '';
   }
 
   static String _getInvoiceDate(dynamic invoice) {
     // Usar FechaEmision del JSON
     if (invoice is Map) {
       final dateStr = invoice['FechaEmision'] as String?;
-      if (dateStr != null && dateStr != '#e') {
+      debugPrint('📅 _getInvoiceDate received: "$dateStr"');
+
+      if (dateStr != null && dateStr != '#e' && dateStr.isNotEmpty) {
         try {
-          final parts = dateStr.split('-');
-          if (parts.length == 3) {
-            final day = int.parse(parts[0]);
-            final month = int.parse(parts[1]);
-            final year = int.parse(parts[2]);
-            final date = DateTime(year, month, day);
-            return DateFormat('dd/MM/yyyy').format(date);
+          // Intentar formato DD/MM/YYYY (como viene del ERP)
+          if (dateStr.contains('/')) {
+            final parts = dateStr.split('/');
+            if (parts.length == 3) {
+              final day = int.parse(parts[0]);
+              final month = int.parse(parts[1]);
+              final year = int.parse(parts[2]);
+              final date = DateTime(year, month, day);
+              final formatted = DateFormat('dd/MM/yyyy').format(date);
+              debugPrint('📅 Formatted date (from /): $formatted');
+              return formatted;
+            }
           }
+
+          // Fallback: formato DD-MM-YYYY
+          if (dateStr.contains('-')) {
+            final parts = dateStr.split('-');
+            if (parts.length == 3) {
+              final day = int.parse(parts[0]);
+              final month = int.parse(parts[1]);
+              final year = int.parse(parts[2]);
+              final date = DateTime(year, month, day);
+              final formatted = DateFormat('dd/MM/yyyy').format(date);
+              debugPrint('📅 Formatted date (from -): $formatted');
+              return formatted;
+            }
+          }
+
+          // Si no se puede parsear, devolver tal como viene
+          debugPrint('📅 Could not parse date, returning as-is: $dateStr');
+          return dateStr;
         } catch (e) {
+          debugPrint('📅 Error parsing date: $e, returning as-is: $dateStr');
           return dateStr;
         }
       }
+      debugPrint('📅 Date is null/empty, returning empty');
       return '';
     }
-    final date = invoice?.fechaemision;
-    return date != null ? DateFormat('dd/MM/yyyy').format(date) : '';
+    if (invoice is Datum) {
+      final date = invoice.fechaemisionDateTime;
+      return date != null ? DateFormat('dd/MM/yyyy').format(date) : '';
+    }
+    return '';
   }
 
   static String _getECF(dynamic invoice) {
     // Usar ENCF del JSON
     if (invoice is Map) return invoice['ENCF'] ?? '';
-    return invoice?.encf ?? '';
+    if (invoice is Datum) return invoice.encf ?? '';
+    return '';
   }
 
   static String _getProductDescription(dynamic invoice) {
@@ -651,8 +921,11 @@ class EnhancedInvoicePdfService {
 
   static String _getUnitPrice(dynamic invoice) {
     if (invoice is Map) return _formatMoney(invoice['total'] ?? 0);
-    final total = _toNum(invoice?.montototal) ?? _toNum(invoice?.fTotal) ?? 0;
-    return _formatMoney(total);
+    if (invoice is Datum) {
+      final total = _toNum(invoice.montototal) ?? _toNum(invoice.fTotal) ?? 0;
+      return _formatMoney(total);
+    }
+    return '0.00';
   }
 
   static String _getTotalPrice(dynamic invoice) {
@@ -660,7 +933,7 @@ class EnhancedInvoicePdfService {
   }
 
   static String _getTotalAmount(dynamic invoice, bool useFakeData) {
-    // Usar MontoTotal del JSON
+    // Usar MontoTotal del JSON (total final a pagar)
     if (invoice is Map) {
       final montoStr = invoice['MontoTotal'] as String?;
       if (montoStr != null && montoStr != '#e') {
@@ -669,22 +942,161 @@ class EnhancedInvoicePdfService {
       }
       return '0.00';
     }
-    final total = _toNum(invoice?.montototal) ?? _toNum(invoice?.fTotal) ?? 0;
-    return _formatMoney(total);
+    if (invoice is Datum) {
+      final total = _toNum(invoice.montototal) ?? _toNum(invoice.fTotal) ?? 0;
+      return _formatMoney(total);
+    }
+    return '0.00';
   }
 
-  static String _getCoverageAmount(bool useFakeData) {
-    // No hay cobertura en el JSON real, siempre 0
+  // Nuevo método: Total de importes (suma de todos los items del detalle)
+  static String _getTotalImporte(dynamic invoice) {
+    if (invoice is Map) {
+      final detalleJson =
+          invoice['DetalleFactura'] as String? ??
+          invoice['detalleFactura'] as String? ??
+          invoice['detalle_factura'] as String?;
+
+      if (detalleJson != null && detalleJson.isNotEmpty) {
+        try {
+          final List<dynamic> detalles = json.decode(detalleJson);
+          double totalImporte = 0.0;
+          for (final detalle in detalles) {
+            final total =
+                double.tryParse(detalle['total']?.toString() ?? '0') ?? 0.0;
+            totalImporte += total;
+          }
+          return _formatMoney(totalImporte);
+        } catch (e) {
+          debugPrint('[PDF] Error calculating total importe: $e');
+        }
+      }
+    }
+    return _getTotalAmount(invoice, false); // Fallback
+  }
+
+  static String _getCoverageAmount(dynamic invoice) {
+    if (invoice is Map) {
+      // Primero intentar usar monto_cobertura del ERP
+      final montoCobertura = invoice['monto_cobertura'] as String?;
+      if (montoCobertura != null && montoCobertura.isNotEmpty) {
+        final cobertura = double.tryParse(montoCobertura) ?? 0.0;
+        return _formatMoney(cobertura);
+      }
+
+      // Fallback: calcular desde los detalles
+      final detalleJson =
+          invoice['DetalleFactura'] as String? ??
+          invoice['detalleFactura'] as String? ??
+          invoice['detalle_factura'] as String?;
+
+      if (detalleJson != null && detalleJson.isNotEmpty) {
+        try {
+          // Calcular total de importes y cobertura
+          final List<dynamic> detalles = json.decode(detalleJson);
+          double totalImporte = 0.0;
+          double totalCobertura = 0.0;
+
+          for (final detalle in detalles) {
+            final total =
+                double.tryParse(detalle['total']?.toString() ?? '0') ?? 0.0;
+            final cobertura =
+                double.tryParse(detalle['cobertura']?.toString() ?? '0') ?? 0.0;
+            totalImporte += total;
+            totalCobertura += cobertura;
+          }
+
+          // Si hay cobertura en los detalles, usarla
+          if (totalCobertura > 0) {
+            return _formatMoney(totalCobertura);
+          }
+
+          // Sino, calcular diferencia (Importe Total - Monto a Pagar)
+          final montoStr = invoice['MontoTotal'] as String?;
+          final montoPagar = double.tryParse(montoStr ?? '0') ?? 0.0;
+          final cobertura = totalImporte - montoPagar;
+          return _formatMoney(cobertura > 0 ? cobertura : 0.0);
+        } catch (e) {
+          debugPrint('[PDF] Error calculating coverage: $e');
+        }
+      }
+    }
     return '0.00';
   }
 
   static String _getNetAmount(dynamic invoice, bool useFakeData) {
-    // El neto es igual al total cuando no hay cobertura
+    // El neto debe ser Importe Total - Cobertura Total
+    if (invoice is Map) {
+      final detalleJson =
+          invoice['DetalleFactura'] as String? ??
+          invoice['detalleFactura'] as String? ??
+          invoice['detalle_factura'] as String?;
+
+      if (detalleJson != null && detalleJson.isNotEmpty) {
+        try {
+          final List<dynamic> detalles = json.decode(detalleJson);
+          double totalImporte = 0.0;
+          double totalCobertura = 0.0;
+
+          for (final detalle in detalles) {
+            final total =
+                double.tryParse(detalle['total']?.toString() ?? '0') ?? 0.0;
+            final cobertura =
+                double.tryParse(detalle['cobertura']?.toString() ?? '0') ?? 0.0;
+            totalImporte += total;
+            totalCobertura += cobertura;
+          }
+
+          final neto = totalImporte - totalCobertura;
+          debugPrint(
+            '💰 Net calculation: $totalImporte - $totalCobertura = $neto',
+          );
+          return _formatMoney(neto);
+        } catch (e) {
+          debugPrint('[PDF] Error calculating net amount: $e');
+        }
+      }
+    }
+
+    // Fallback: usar el monto total de la factura
     return _getTotalAmount(invoice, useFakeData);
   }
 
   static String _getTotalClinico(dynamic invoice, bool useFakeData) {
-    // Usar MontoTotal del JSON
+    // Total Clínico = Cobertura + Total Gral (Neto a Pagar)
+    if (invoice is Map) {
+      final detalleJson =
+          invoice['DetalleFactura'] as String? ??
+          invoice['detalleFactura'] as String? ??
+          invoice['detalle_factura'] as String?;
+
+      if (detalleJson != null && detalleJson.isNotEmpty) {
+        try {
+          final List<dynamic> detalles = json.decode(detalleJson);
+          double totalImporte = 0.0;
+          double totalCobertura = 0.0;
+
+          for (final detalle in detalles) {
+            final total =
+                double.tryParse(detalle['total']?.toString() ?? '0') ?? 0.0;
+            final cobertura =
+                double.tryParse(detalle['cobertura']?.toString() ?? '0') ?? 0.0;
+            totalImporte += total;
+            totalCobertura += cobertura;
+          }
+
+          // Total Clínico = Total Importe (que es Cobertura + Neto)
+          debugPrint(
+            '💰 Total Clínico calculation: Total Importe = $totalImporte',
+          );
+          return _formatMoney(totalImporte);
+        } catch (e) {
+          debugPrint('[PDF] Error calculating total clínico: $e');
+        }
+      }
+    }
+
+    // Fallback
     return _getTotalAmount(invoice, useFakeData);
   }
 
@@ -698,8 +1110,11 @@ class EnhancedInvoicePdfService {
       }
       return '0.00';
     }
-    final itbis = _toNum(invoice?.totalitbis) ?? _toNum(invoice?.fItbis) ?? 0;
-    return _formatMoney(itbis);
+    if (invoice is Datum) {
+      final itbis = _toNum(invoice.totalitbis) ?? _toNum(invoice.fItbis) ?? 0;
+      return _formatMoney(itbis);
+    }
+    return '0.00';
   }
 
   static String _getItemCount(dynamic invoice) {
@@ -722,7 +1137,8 @@ class EnhancedInvoicePdfService {
   static String _getSecurityCode(dynamic invoice, bool useFakeData) {
     // Usar CodigoSeguridad del JSON si existe
     if (invoice is Map) return invoice['CodigoSeguridad'] ?? '';
-    return invoice?.codigoSeguridad ?? '';
+    if (invoice is Datum) return invoice.codigoSeguridad ?? '';
+    return '';
   }
 
   static String _getSignatureDate(dynamic invoice, bool useFakeData) {
@@ -745,8 +1161,11 @@ class EnhancedInvoicePdfService {
       }
       return '';
     }
-    final date = invoice?.fechaHoraFirma ?? invoice?.fechaemision;
-    return date != null ? DateFormat('dd/MM/yy').format(date) : '';
+    if (invoice is Datum) {
+      final date = invoice.fechaHoraFirma ?? invoice.fechaemisionDateTime;
+      return date != null ? DateFormat('dd/MM/yy').format(date) : '';
+    }
+    return '';
   }
 
   // Utility methods
@@ -762,34 +1181,114 @@ class EnhancedInvoicePdfService {
 
   // Métodos para extraer datos específicos del JSON real
   static String _getAuthorization(dynamic invoice) {
-    // No existe en el JSON real, siempre vacío
+    // Usar no_autorizacion del JSON
+    if (invoice is Map) return invoice['no_autorizacion'] ?? '';
     return '';
   }
 
   static String _getInsurance(dynamic invoice) {
-    // No existe en el JSON real, siempre vacío
+    // Usar aseguradora del JSON
+    if (invoice is Map) return invoice['aseguradora'] ?? '';
     return '';
   }
 
   static String _getNSS(dynamic invoice) {
-    // No existe en el JSON real, siempre vacío
+    // Usar nss del JSON
+    if (invoice is Map) return invoice['nss'] ?? '';
     return '';
   }
 
   static String _getDoctor(dynamic invoice) {
-    // No existe en el JSON real, siempre vacío
+    // Usar medico del JSON
+    if (invoice is Map) return invoice['medico'] ?? '';
     return '';
   }
 
-  static String _getRecord(dynamic invoice) {
-    // No existe en el JSON real, siempre vacío
-    return '';
-  }
+  // static String _getRecord(dynamic invoice) {
+  //   // No existe en el JSON real, siempre vacío
+  //   return '';
+  // }
 
   static String _getPatientName(dynamic invoice) {
     // Usar RazonSocialComprador del JSON
     if (invoice is Map) return invoice['RazonSocialComprador'] ?? '';
-    return invoice?.razonsocialcomprador?.toString() ?? '';
+    if (invoice is Datum) {
+      // razonsocialcomprador es un enum, necesitamos convertirlo a string
+      final razon = invoice.razonsocialcomprador;
+      if (razon != null) {
+        return razonsocialcompradorValues.reverse[razon] ?? '';
+      }
+    }
+    return '';
+  }
+
+  static String _getRecord(dynamic invoice) {
+    // Usar cedula_medico del JSON para RNC/CED
+    if (invoice is Map) return invoice['cedula_medico'] ?? '';
+    return '';
+  }
+
+  static String _getTipoFacturaTitulo(dynamic invoice) {
+    // Usar tipo_factura_titulo del JSON
+    if (invoice is Map) {
+      final tipo = invoice['tipo_factura_titulo'] as String?;
+      debugPrint('🏷️ _getTipoFacturaTitulo received: "$tipo"');
+      debugPrint('🏷️ Available keys: ${invoice.keys.toList()}');
+
+      if (tipo != null && tipo.trim().isNotEmpty) {
+        final result = tipo.trim();
+        debugPrint('🏷️ Using tipo_factura_titulo: "$result"');
+        return result;
+      } else {
+        debugPrint('🏷️ tipo_factura_titulo is null/empty, using fallback');
+        return 'CONTADO - LABORATORIO';
+      }
+    }
+    debugPrint('🏷️ Invoice is not Map, using fallback');
+    return 'CONTADO - LABORATORIO';
+  }
+
+  static String _getQRUrl(dynamic invoice) {
+    // Debug: mostrar el tipo de invoice y algunos campos
+    debugPrint(
+      '[EnhancedInvoicePdfService] _getQRUrl - invoice type: ${invoice.runtimeType}',
+    );
+
+    if (invoice is Map) {
+      // Debug: mostrar las claves disponibles
+      debugPrint(
+        '[EnhancedInvoicePdfService] Available keys: ${invoice.keys.toList()}',
+      );
+
+      // Buscar en cada campo y hacer debug
+      final linkOriginal = invoice['linkOriginal'] as String?;
+      final linkOriginalUnderscore = invoice['link_original'] as String?;
+      final xmlPublicUrl = invoice['xmlPublicUrl'] as String?;
+
+      debugPrint('[EnhancedInvoicePdfService] linkOriginal: $linkOriginal');
+      debugPrint(
+        '[EnhancedInvoicePdfService] link_original: $linkOriginalUnderscore',
+      );
+      debugPrint('[EnhancedInvoicePdfService] xmlPublicUrl: $xmlPublicUrl');
+
+      // Campos comunes donde puede venir el URL del QR
+      return linkOriginal ??
+          linkOriginalUnderscore ??
+          xmlPublicUrl ??
+          (invoice['qrUrl'] as String?) ??
+          (invoice['urlQR'] as String?) ??
+          (invoice['qrLink'] as String?) ??
+          '';
+    }
+    if (invoice is Datum) {
+      final url = invoice.linkOriginal ?? '';
+      debugPrint('[EnhancedInvoicePdfService] Datum linkOriginal: $url');
+      return url;
+    }
+    debugPrint(
+      '[EnhancedInvoicePdfService] Unknown invoice type, returning empty',
+    );
+    return '';
   }
 
   static String _getInvoiceTitle(dynamic invoice) {

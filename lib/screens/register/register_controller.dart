@@ -1,6 +1,7 @@
 import 'package:facturacion/routes/app_routes.dart';
 import 'package:facturacion/services/firebase_auth_service.dart';
 import 'package:facturacion/services/firestore_service.dart';
+import 'package:facturacion/services/user_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -24,6 +25,7 @@ class RegisterController extends GetxController {
   // Admin login
   final adminEmailCtrl = TextEditingController();
   final adminPasswordCtrl = TextEditingController();
+  final nombreAdminCtrl = TextEditingController();
 
   bool loading = false;
   String? errorMessage;
@@ -36,6 +38,12 @@ class RegisterController extends GetxController {
   String? correoEmpresaError;
   String? adminEmailError;
   String? adminPassError;
+  String? nombreAdminError;
+
+  // Evita llamar update() después de que el controlador fue cerrado
+  void _safeUpdate() {
+    if (!isClosed) update();
+  }
 
   Future<void> submit() async {
     // Validaciones básicas
@@ -47,6 +55,7 @@ class RegisterController extends GetxController {
     final correoEmpresa = correoEmpresaCtrl.text.trim();
     final adminEmail = adminEmailCtrl.text.trim();
     final adminPass = adminPasswordCtrl.text;
+    final nombreAdmin = nombreAdminCtrl.text.trim();
 
     // Reset de errores
     rncError = null;
@@ -57,6 +66,7 @@ class RegisterController extends GetxController {
     correoEmpresaError = null;
     adminEmailError = null;
     adminPassError = null;
+    nombreAdminError = null;
 
     // Validaciones por campo
     if (rnc.isEmpty) rncError = 'Requerido';
@@ -67,6 +77,7 @@ class RegisterController extends GetxController {
     if (correoEmpresa.isEmpty) correoEmpresaError = 'Requerido';
     if (!adminEmail.contains('@')) adminEmailError = 'Correo inválido';
     if (adminPass.length < 6) adminPassError = 'Mínimo 6 caracteres';
+    if (nombreAdmin.isEmpty) nombreAdminError = 'Requerido';
 
     final hasErrors = [
       rncError,
@@ -77,22 +88,26 @@ class RegisterController extends GetxController {
       correoEmpresaError,
       adminEmailError,
       adminPassError,
+      nombreAdminError,
     ].any((e) => e != null);
 
     if (hasErrors) {
       errorMessage = 'Corrige los campos marcados.';
-      update();
+      _safeUpdate();
       return;
     }
 
     loading = true;
     errorMessage = null;
-    update();
+    _safeUpdate();
 
     User? createdUser;
     try {
       // Creamos usuario admin en Firebase Auth
-      final cred = await _auth.registerWithEmailPassword(email: adminEmail, password: adminPass);
+      final cred = await _auth.registerWithEmailPassword(
+        email: adminEmail,
+        password: adminPass,
+      );
       createdUser = cred.user;
       final uid = createdUser?.uid;
 
@@ -101,48 +116,44 @@ class RegisterController extends GetxController {
       final batch = db.batch();
 
       final companyRef = db.doc('companies/$rnc');
-      batch.set(
-        companyRef,
-        {
-          'rnc': rnc,
-          'razonSocial': razon,
-          'representanteFiscal': rep,
-          'direccion': dir,
-          'telefono': tel,
-          'correo': correoEmpresa,
-          'adminUid': uid,
-          'adminEmail': adminEmail,
-          'createdAt': FieldValue.serverTimestamp(),
-        },
-        SetOptions(merge: true),
-      );
+      batch.set(companyRef, {
+        'rnc': rnc,
+        'razonSocial': razon,
+        'representanteFiscal': rep,
+        'direccion': dir,
+        'telefono': tel,
+        'correo': correoEmpresa,
+        'adminUid': uid,
+        'adminEmail': adminEmail,
+        'createdAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
 
       if (uid != null && uid.isNotEmpty) {
         final userRef = db.doc('users/$uid');
-        batch.set(
-          userRef,
-          {
-            'uid': uid,
-            'email': adminEmail,
-            'companyRnc': rnc,
-            'companyName': razon,
-            'role': 'admin',
-            'createdAt': FieldValue.serverTimestamp(),
-          },
-          SetOptions(merge: true),
-        );
+        batch.set(userRef, {
+          'uid': uid,
+          'email': adminEmail,
+          'nombre': nombreAdmin, // Guardar el nombre del administrador
+          'companyRnc': rnc,
+          'companyName': razon,
+          'role': 'admin',
+          'createdAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
       }
 
       await batch.commit();
 
       // Marcador de sesión para Splash
       box.write('f_nombre_usuario', adminEmail);
+      // Guardar el nombre del usuario para usar en PDFs
+      await UserService.saveUserNameToStorage();
       LoggerService().info('register.success', {
         'adminEmail': adminEmail,
         'companyRnc': rnc,
       });
 
-      // Navegación a Home
+      // Navegación a Home (asegura desfocar para evitar uso tras dispose)
+      FocusManager.instance.primaryFocus?.unfocus();
       Get.offAllNamed(AppRoutes.HOME);
     } catch (e) {
       // Si falló Firestore tras crear el usuario, intenta eliminar el usuario para evitar "email ya existe".
@@ -155,7 +166,7 @@ class RegisterController extends GetxController {
       });
       errorMessage = _messageForError(e);
       loading = false;
-      update();
+      _safeUpdate();
     }
   }
 
@@ -185,19 +196,26 @@ class RegisterController extends GetxController {
       case 'adminPass':
         adminPassError = null;
         break;
+      case 'nombreAdmin':
+        nombreAdminError = null;
+        break;
     }
-    update();
+    _safeUpdate();
   }
 
   String _messageForError(Object e) {
     final msg = e.toString();
-    if (msg.contains('email-already-in-use')) return 'El correo del administrador ya está en uso.';
-    if (msg.contains('invalid-email')) return 'Correo de administrador inválido.';
+    if (msg.contains('email-already-in-use'))
+      return 'El correo del administrador ya está en uso.';
+    if (msg.contains('invalid-email'))
+      return 'Correo de administrador inválido.';
     return 'No se pudo completar el registro. Intenta nuevamente.';
   }
 
   @override
   void onClose() {
+    // Evita que campos todavía con foco sigan notificando tras dispose
+    FocusManager.instance.primaryFocus?.unfocus();
     rncCtrl.dispose();
     razonSocialCtrl.dispose();
     representanteFiscalCtrl.dispose();
@@ -206,6 +224,7 @@ class RegisterController extends GetxController {
     correoEmpresaCtrl.dispose();
     adminEmailCtrl.dispose();
     adminPasswordCtrl.dispose();
+    nombreAdminCtrl.dispose();
     super.onClose();
   }
 }

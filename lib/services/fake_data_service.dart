@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import '../models/invoice.dart';
+import '../models/invoice_extensions.dart';
 
 class FakeDataService {
   static List<Map<String, dynamic>>? _cachedTipos;
@@ -47,63 +48,17 @@ class FakeDataService {
     }
   }
 
-  /// Convierte los datos JSON a objetos Datum
+  /// Convierte los datos JSON a objetos Datum usando el parser del modelo
   static Future<List<Datum>> generateFakeInvoicesFromJson() async {
     final tiposData = await loadTiposData();
     final List<Datum> invoices = [];
 
     for (int i = 0; i < tiposData.length; i++) {
       final data = tiposData[i];
-      final now = DateTime.now();
 
       try {
-        final invoice = Datum(
-          // Información básica
-          encf: data['ENCF'] ?? '',
-          fDocumento: data['NumeroFacturaInterna'] ?? data['ENCF'] ?? '',
-          fechaemision:
-              _parseDate(data['FechaEmision']) ??
-              now.subtract(Duration(days: i + 1)),
-          fechavencimientosecuencia:
-              _parseDate(data['FechaVencimientoSecuencia']) ??
-              now.add(const Duration(days: 30)),
-
-          // Emisor
-          rncemisor: data['RNCEmisor'] ?? '',
-          razonsocialemisor: _parseRazonSocial(data['RazonSocialEmisor']),
-          direccionemisor: _parseRazonSocial(data['DireccionEmisor']),
-
-          // Comprador
-          rnccomprador: data['RNCComprador'] ?? '',
-          razonsocialcomprador: _parseRazonSocial(data['RazonSocialComprador']),
-          direccioncomprador: data['DireccionComprador'] ?? '',
-
-          // Montos
-          montototal: _formatMoney(data['MontoTotal']),
-          fSubtotal: _formatMoney(
-            data['MontoGravadoTotal'] ?? data['MontoExento'],
-          ),
-          fItbis: _formatMoney(data['TotalITBIS']),
-          fTotal: _formatMoney(data['MontoTotal']),
-
-          // Tipo de comprobante
-          tipoecf: data['TipoeCF']?.toString() ?? '',
-          tipoComprobante: data['TipoeCF']?.toString() ?? '',
-
-          // Estados simulados basados en el estatus del JSON
-          fAnulada: data['estatus'] == 'Rechazado',
-          fPagada: data['estatus'] == 'Aprobado',
-
-          // Códigos de seguridad (simulados)
-          codigoSeguridad: _generateSecurityCode(i),
-          fechaHoraFirma: data['estatus'] != 'Pendiente'
-              ? now.subtract(Duration(hours: i * 2))
-              : null,
-
-          // Secuencia
-          fFacturaSecuencia: i + 1,
-        );
-
+        // Usar el parser del modelo Invoice para crear el Datum
+        final invoice = Datum.fromJson(data);
         invoices.add(invoice);
       } catch (e) {
         debugPrint('[FakeDataService] Error processing record $i: $e');
@@ -123,10 +78,16 @@ class FakeDataService {
   ) async {
     debugPrint('[FakeDataService] Generating invoices for category: $category');
 
-    final allInvoices = await generateFakeInvoicesFromJson();
+    var allInvoices = await generateFakeInvoicesFromJson();
     debugPrint(
       '[FakeDataService] Total invoices loaded: ${allInvoices.length}',
     );
+
+    // Si no se cargó nada, retornar lista vacía
+    if (allInvoices.isEmpty) {
+      debugPrint('[FakeDataService] No invoices loaded from ejemplos.json');
+      return [];
+    }
 
     List<Datum> result;
     switch (category.toLowerCase()) {
@@ -137,11 +98,12 @@ class FakeDataService {
                   inv.encf?.startsWith('E31') == true ||
                   inv.encf?.startsWith('E32') == true,
             )
-            .take(4)
             .toList();
         break;
       case 'ars':
-        result = allInvoices.skip(2).take(3).toList();
+        // Si se requiere una lógica específica para ARS, reemplazar este filtro.
+        // Por ahora, se muestran todas (sin recortar) para que no haya límites.
+        result = allInvoices.toList();
         break;
       case 'enviados':
         result = allInvoices
@@ -211,6 +173,70 @@ class FakeDataService {
       '[FakeDataService] Extracted ${products.length} product details',
     );
     return products;
+  }
+
+  /// Obtiene los items reales de una factura específica (por ENCF o Número Interno)
+  static Future<List<Map<String, dynamic>>> getProductDetailsForInvoice(
+    Datum invoice,
+  ) async {
+    final tiposData = await loadTiposData();
+    Map<String, dynamic>? record;
+
+    final encf = invoice.encf ?? '';
+    final numero = invoice.fDocumento ?? '';
+
+    // Buscar el registro correspondiente en ejemplos.json
+    for (final data in tiposData) {
+      final dataEncf = (data['ENCF'] ?? '') as String;
+      final dataNumero = (data['NumeroFacturaInterna'] ?? '') as String;
+      if (dataEncf == encf || (numero.isNotEmpty && dataNumero == numero)) {
+        record = data;
+        break;
+      }
+    }
+
+    if (record == null) {
+      debugPrint(
+        '[FakeDataService] No matching record found for invoice ${encf.isNotEmpty ? encf : numero}',
+      );
+      return [];
+    }
+
+    // Extraer los items del registro encontrado
+    final List<Map<String, dynamic>> items = [];
+    for (int i = 1; i <= 50; i++) {
+      final nombreKey = 'NombreItem[$i]';
+      final cantidadKey = 'CantidadItem[$i]';
+      final precioKey = 'PrecioUnitarioItem[$i]';
+      final montoKey = 'MontoItem[$i]';
+      final lineaKey = 'NumeroLinea[$i]';
+
+      if (record.containsKey(nombreKey) &&
+          record[nombreKey] != null &&
+          record[nombreKey] != '#e') {
+        items.add({
+          'linea': (record[lineaKey] ?? i.toString()).toString(),
+          'id': i.toString(),
+          'nombre': record[nombreKey],
+          'cantidad': record[cantidadKey] ?? '1.00',
+          'precio': record[precioKey] ?? '0.00',
+          'monto': record[montoKey] ?? '0.00',
+          'unidad': record['UnidadMedida[$i]'] ?? '43',
+        });
+      }
+    }
+
+    // Ordenar por número de línea si está disponible
+    items.sort((a, b) {
+      final aLine = int.tryParse((a['linea'] ?? '0').toString()) ?? 0;
+      final bLine = int.tryParse((b['linea'] ?? '0').toString()) ?? 0;
+      return aLine.compareTo(bLine);
+    });
+
+    debugPrint(
+      '[FakeDataService] Extracted ${items.length} items for invoice ${encf.isNotEmpty ? encf : numero}',
+    );
+    return items;
   }
 
   // Métodos auxiliares

@@ -5,6 +5,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
 import '../models/invoice.dart';
+import '../models/invoice_extensions.dart';
 
 import '../services/company_config_service.dart';
 
@@ -108,15 +109,15 @@ class InvoicePdfService {
                         ),
                         pw.SizedBox(height: 2),
                         pw.Text(
-                          'e-CF: ${inv.encf ?? inv.fDocumento ?? '-'}',
+                          'ENCF: ${inv.encf ?? inv.fDocumento ?? '-'}',
                           style: pw.TextStyle(fontSize: 10),
                         ),
                         pw.Text(
-                          'Fecha Emisión: ${_fmtDateDt(inv.fechaemision)}',
+                          'Fecha Emisión: ${_formatDate(inv.fechaemisionDateTime)}',
                           style: pw.TextStyle(fontSize: 10),
                         ),
                         pw.Text(
-                          'Fecha Vencimiento: ${_fmtDateDt(inv.fechavencimientosecuencia)}',
+                          'Fecha Vencimiento: ${_formatDate(inv.fechavencimientosecuenciaDateTime)}',
                           style: pw.TextStyle(fontSize: 10),
                         ),
                       ],
@@ -622,4 +623,9 @@ class _ProductItem {
   final num total;
 
   _ProductItem(this.description, this.quantity, this.unitPrice, this.total);
+}
+
+String _formatDate(DateTime? date) {
+  if (date == null) return 'N/A';
+  return DateFormat('dd/MM/yyyy').format(date);
 }
