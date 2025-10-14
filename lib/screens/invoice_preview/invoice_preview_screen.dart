@@ -4,12 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pdf/pdf.dart';
 
-import 'package:printing/printing.dart';
-
 import '../../models/erp_invoice.dart';
 
 import '../../services/enhanced_invoice_pdf_service.dart';
 import '../../services/company_config_service.dart';
+import '../../widgets/pdf_viewer_widget.dart';
 
 class InvoicePreviewScreen extends StatefulWidget {
   const InvoicePreviewScreen({super.key});
@@ -74,14 +73,39 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
                 valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF005285)),
               ),
             )
-          : PdfPreview(
-              canChangeOrientation: true,
-              canDebug: false,
-              build: (format) => _buildPdf(format, inv),
-              pdfFileName: fileName,
-              initialPageFormat: PdfPageFormat.a4,
-              allowSharing: true,
-              allowPrinting: true,
+          : FutureBuilder<Uint8List>(
+              future: _buildPdf(PdfPageFormat.a4, inv),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        Color(0xFF005285),
+                      ),
+                    ),
+                  );
+                }
+
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error, size: 64, color: Colors.red),
+                        const SizedBox(height: 16),
+                        Text('Error generando PDF: ${snapshot.error}'),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () => setState(() {}),
+                          child: const Text('Reintentar'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return QuickPdfPreview(pdfBytes: snapshot.data!);
+              },
             ),
     );
   }

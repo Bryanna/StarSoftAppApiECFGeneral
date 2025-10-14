@@ -6,5 +6,6 @@ class AppRoutes {
   static const REGISTER = '/register';
   static const PROFILE = '/profile';
   static const CONFIGURACION = '/configuracion';
+  static const PDF_MAKER = '/pdf_maker';
   static const QUEUE = '/queue';
 }

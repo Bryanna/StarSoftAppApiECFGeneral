@@ -9,10 +9,12 @@ import '../screens/login/login_binding.dart';
 import '../screens/login/login_screen.dart';
 import '../screens/register/register_binding.dart';
 import '../screens/register/register_screen.dart';
-import '../screens/profile/profile_controller.dart';
+
 import '../screens/profile/profile_screen.dart';
 import '../screens/configuracion/configuracion_binding.dart';
 import '../screens/configuracion/configuracion_screen.dart';
+import '../screens/pdf_maker/pdf_maker_binding.dart';
+import '../screens/pdf_maker/pdf_maker_screen.dart';
 import '../screens/queue/queue_screen_simple.dart';
 import 'app_routes.dart';
 
@@ -51,6 +53,11 @@ class AppPages {
       name: AppRoutes.CONFIGURACION,
       page: () => const ConfiguracionScreen(),
       binding: ConfiguracionBinding(),
+    ),
+    GetPage(
+      name: AppRoutes.PDF_MAKER,
+      page: () => const PdfMakerScreen(),
+      binding: PdfMakerBinding(),
     ),
     GetPage(name: AppRoutes.QUEUE, page: () => const QueueScreenSimple()),
   ];

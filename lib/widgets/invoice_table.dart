@@ -16,6 +16,8 @@ class InvoiceTable extends StatelessWidget {
   final InvoiceCallback onView;
   final InvoiceCallback onSend;
   final InvoiceCallback onDownload;
+  final InvoiceCallback? onPreview;
+  final InvoiceCallback? onPrint;
   final SelectionCallback? onToggleSelection;
   final SelectAllCallback? onToggleSelectAll;
   final IsSelectedCallback? isSelected;
@@ -27,6 +29,8 @@ class InvoiceTable extends StatelessWidget {
     required this.onView,
     required this.onSend,
     required this.onDownload,
+    this.onPreview,
+    this.onPrint,
     this.onToggleSelection,
     this.onToggleSelectAll,
     this.isSelected,
@@ -331,6 +335,30 @@ class InvoiceTable extends StatelessWidget {
           const Color(0xFF0072CE),
           () => onSend(invoice),
         ),
+        const SizedBox(width: 6),
+        if (onPreview != null)
+          btn(
+            FontAwesomeIcons.magnifyingGlass,
+            'Vista previa',
+            const Color(0xFF28a745),
+            () => onPreview!(invoice),
+          ),
+        const SizedBox(width: 6),
+        btn(
+          FontAwesomeIcons.download,
+          'Descargar PDF',
+          const Color(0xFF6f42c1),
+          () => onDownload(invoice),
+        ),
+        if (onPrint != null) ...[
+          const SizedBox(width: 6),
+          btn(
+            FontAwesomeIcons.print,
+            'Imprimir',
+            const Color(0xFF17a2b8),
+            () => onPrint!(invoice),
+          ),
+        ],
       ],
     );
   }

@@ -10,8 +10,9 @@ import '../../models/erp_invoice.dart';
 import '../../models/ui_types.dart';
 import '../../models/tipo_comprobante.dart';
 import '../../services/invoice_service.dart';
+import '../../services/pdf_viewer_service.dart';
 import '../../routes/app_routes.dart';
-import 'package:printing/printing.dart';
+
 import 'package:pdf/pdf.dart';
 import '../../services/enhanced_invoice_pdf_service.dart';
 import '../../services/fake_data_service.dart';
@@ -345,6 +346,74 @@ class HomeController extends GetxController {
     }
   }
 
+  Future<void> previewInvoice(ERPInvoice invoice) async {
+    try {
+      debugPrint('');
+      debugPrint('🔍🔍🔍 PREVIEW INVOICE CALLED - HOME CONTROLLER 🔍🔍🔍');
+      debugPrint(
+        '🔍 About to call EnhancedInvoicePdfService.buildPdf for preview',
+      );
+      debugPrint('');
+
+      final invoiceMap = _convertERPInvoiceToMap(invoice);
+
+      final bytes = await EnhancedInvoicePdfService.buildPdf(
+        PdfPageFormat.a4,
+        invoiceMap,
+      );
+      final name =
+          'Vista Previa - Factura ${invoice.numeroFactura.isNotEmpty ? invoice.numeroFactura : 'CENSAVID'}';
+
+      // Mostrar vista previa rápida
+      PdfViewerService.showQuickPreview(
+        context: Get.context!,
+        pdfBytes: bytes,
+        title: name,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'No se pudo generar la vista previa: $e',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
+  Future<void> printInvoice(ERPInvoice invoice) async {
+    try {
+      debugPrint('');
+      debugPrint('🖨️🖨️🖨️ PRINT INVOICE CALLED - HOME CONTROLLER 🖨️🖨️🖨️');
+      debugPrint(
+        '🖨️ About to call EnhancedInvoicePdfService.buildPdf for printing',
+      );
+      debugPrint('');
+
+      final invoiceMap = _convertERPInvoiceToMap(invoice);
+
+      final bytes = await EnhancedInvoicePdfService.buildPdf(
+        PdfPageFormat.a4,
+        invoiceMap,
+      );
+      final name =
+          'Factura ${invoice.numeroFactura.isNotEmpty ? invoice.numeroFactura : 'CENSAVID'}';
+
+      // Intentar imprimir directamente
+      await PdfViewerService.printPdf(pdfBytes: bytes, title: name);
+
+      Get.snackbar(
+        'Impresión',
+        'Factura ${invoice.numeroFactura.isNotEmpty ? invoice.numeroFactura : '-'} enviada a impresora',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'No se pudo imprimir: $e',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
   Future<void> downloadInvoice(ERPInvoice invoice) async {
     try {
       debugPrint('');
@@ -433,12 +502,14 @@ class HomeController extends GetxController {
         invoiceMap,
       );
       final name =
-          'Factura_${invoice.numeroFactura.isNotEmpty ? invoice.numeroFactura : 'CENSAVID'}.pdf';
-      // En web, sharePdf inicia descarga del archivo
-      await Printing.sharePdf(bytes: bytes, filename: name);
+          'Factura_${invoice.numeroFactura.isNotEmpty ? invoice.numeroFactura : 'CENSAVID'}';
+
+      // Mostrar en el visor personalizado
+      PdfViewerService.showPdf(pdfBytes: bytes, title: name, showActions: true);
+
       Get.snackbar(
-        'Descargado',
-        '${invoice.numeroFactura.isNotEmpty ? invoice.numeroFactura : '-'} descargado',
+        'PDF Generado',
+        'Factura ${invoice.numeroFactura.isNotEmpty ? invoice.numeroFactura : '-'} lista para ver',
         snackPosition: SnackPosition.BOTTOM,
       );
     } catch (e) {

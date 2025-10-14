@@ -394,6 +394,8 @@ class HomeScreen extends StatelessWidget {
         onView: controller.viewDetails,
         onSend: controller.sendInvoice,
         onDownload: controller.downloadInvoice,
+        onPreview: controller.previewInvoice,
+        onPrint: controller.printInvoice,
         onToggleSelection: controller.toggleSelection,
         onToggleSelectAll: controller.toggleSelectAll,
         isSelected: controller.isSelected,
@@ -546,7 +548,7 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-enum _AccountAction { profile, settings, logout }
+enum _AccountAction { profile, settings, pdfMaker, logout }
 
 class _AccountMenuButton extends StatelessWidget {
   const _AccountMenuButton();
@@ -567,6 +569,9 @@ class _AccountMenuButton extends StatelessWidget {
             break;
           case _AccountAction.settings:
             Get.toNamed(AppRoutes.CONFIGURACION);
+            break;
+          case _AccountAction.pdfMaker:
+            Get.toNamed(AppRoutes.PDF_MAKER);
             break;
           case _AccountAction.logout:
             await FirebaseAuthService().signOut();
@@ -593,6 +598,10 @@ class _AccountMenuButton extends StatelessWidget {
         const PopupMenuItem<_AccountAction>(
           value: _AccountAction.settings,
           child: Text('Configuración'),
+        ),
+        const PopupMenuItem<_AccountAction>(
+          value: _AccountAction.pdfMaker,
+          child: Text('PDF Maker'),
         ),
         const PopupMenuItem<_AccountAction>(
           value: _AccountAction.logout,
