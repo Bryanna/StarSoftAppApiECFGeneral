@@ -1,11 +1,9 @@
-import 'dart:typed_data';
 import 'package:facturacion/models/pdf_element.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import '../screens/pdf_maker/pdf_maker_controller.dart';
 import '../services/company_config_service.dart';
 import '../services/user_service.dart';
 

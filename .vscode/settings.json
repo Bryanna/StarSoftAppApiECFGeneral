@@ -1,0 +1,102 @@
+{
+  // Configuración para Flutter/Dart
+  "dart.flutterSdkPath": null,
+  "dart.sdkPath": null,
+
+  // Auto-formateo y guardado
+  "editor.formatOnSave": true,
+  "editor.formatOnType": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll": "explicit",
+    "source.organizeImports": "explicit"
+  },
+
+  // Configuración específica para Dart
+  "[dart]": {
+    "editor.formatOnSave": true,
+    "editor.formatOnType": true,
+    "editor.rulers": [80],
+    "editor.selectionHighlight": false,
+    "editor.suggest.snippetsPreventQuickSuggestions": false,
+    "editor.suggestSelection": "first",
+    "editor.tabCompletion": "onlySnippets",
+    "editor.wordBasedSuggestions": "off"
+  },
+
+  // Configuración de archivos
+  "files.associations": {
+    "*.dart": "dart"
+  },
+
+  // Excluir archivos del explorador
+  "files.exclude": {
+    "**/.git": true,
+    "**/.svn": true,
+    "**/.hg": true,
+    "**/CVS": true,
+    "**/.DS_Store": true,
+    "**/build": true,
+    "**/.dart_tool": true,
+    "**/.flutter-plugins": true,
+    "**/.flutter-plugins-dependencies": true,
+    "**/generated_plugin_registrant.dart": true
+  },
+
+  // Configuración de búsqueda
+  "search.exclude": {
+    "**/build": true,
+    "**/.dart_tool": true,
+    "**/.git": true,
+    "**/node_modules": true
+  },
+
+  // Configuración de Git
+  "git.ignoreLimitWarning": true,
+
+  // Configuración de terminal
+  "terminal.integrated.shell.osx": "/bin/zsh",
+
+  // Configuración de extensiones
+  "extensions.ignoreRecommendations": false,
+
+  // Configuración específica para evitar interrupciones
+  "dart.showInspectorNotificationsForWidgetErrors": false,
+  "dart.previewFlutterUiGuides": true,
+  "dart.previewFlutterUiGuidesCustomTracking": true,
+  "dart.hotReloadOnSave": "all",
+  "dart.showTodos": false,
+
+  // Configuración de linting más permisiva
+  "dart.analysisServerFolding": false,
+  "dart.showMainCodeLens": false,
+  "dart.showTestCodeLens": false,
+
+  // Configuración para reducir notificaciones
+  "workbench.startupEditor": "none",
+  "telemetry.telemetryLevel": "off",
+  "update.showReleaseNotes": false,
+
+  // Configuración de IntelliSense más fluida
+  "editor.quickSuggestions": {
+    "other": true,
+    "comments": false,
+    "strings": true
+  },
+  "editor.quickSuggestionsDelay": 10,
+  "editor.suggestOnTriggerCharacters": true,
+  "editor.acceptSuggestionOnEnter": "on",
+
+  // Configuración para evitar warnings molestos
+  "problems.decorations.enabled": false,
+  "editor.renderWhitespace": "none",
+  "editor.renderControlCharacters": false,
+
+  // Configuración de colores y tema
+  "editor.minimap.enabled": false,
+
+  // Configuración específica para desarrollo Flutter
+  "dart.debugExternalPackageLibraries": false,
+  "dart.debugSdkLibraries": false,
+  "dart.evaluateGettersInDebugViews": false,
+  "dart.vmAdditionalArgs": ["--disable-service-auth-codes"]
+}

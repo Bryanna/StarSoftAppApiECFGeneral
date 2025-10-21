@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import '../../lib/models/invoice_detail.dart';
-import '../../lib/models/erp_invoice.dart';
-import '../../lib/models/erp_invoice_extensions.dart';
+import 'package:facturacion/models/invoice_detail.dart';
+import 'package:facturacion/models/erp_invoice.dart';
+import 'package:facturacion/models/erp_invoice_extensions.dart';
 
 void main() {
   group('InvoiceDetail', () {

@@ -22,11 +22,9 @@ class ThemeService {
       primary: primary,
       secondary: secondary,
       surface: Colors.white,
-      background: Color(0xFFF7F8FA),
       onPrimary: Colors.white,
       onSecondary: Colors.white,
       onSurface: Colors.black87,
-      onBackground: Colors.black87,
       error: Colors.red,
       onError: Colors.white,
     );
@@ -34,7 +32,7 @@ class ThemeService {
       useMaterial3: true,
       fontFamily: 'Inter',
       colorScheme: colorScheme,
-      scaffoldBackgroundColor: colorScheme.background,
+      scaffoldBackgroundColor: colorScheme.surface,
       appBarTheme: const AppBarTheme(
         backgroundColor: primary,
         foregroundColor: Colors.white,
@@ -42,13 +40,13 @@ class ThemeService {
         centerTitle: false,
       ),
       cardColor: Colors.white,
-      dialogBackgroundColor: Colors.white,
       inputDecorationTheme: const InputDecorationTheme(
         border: OutlineInputBorder(),
         focusedBorder: OutlineInputBorder(
           borderSide: BorderSide(color: primary),
         ),
       ),
+      dialogTheme: DialogThemeData(backgroundColor: Colors.white),
     );
   }
 
@@ -59,11 +57,9 @@ class ThemeService {
       primary: primary,
       secondary: secondary,
       surface: Color(0xFF121212),
-      background: Color(0xFF0F1115),
       onPrimary: Colors.white,
       onSecondary: Colors.black,
       onSurface: Colors.white70,
-      onBackground: Colors.white70,
       error: Colors.redAccent,
       onError: Colors.white,
     );
@@ -71,7 +67,7 @@ class ThemeService {
       useMaterial3: true,
       fontFamily: 'Inter',
       colorScheme: colorScheme,
-      scaffoldBackgroundColor: colorScheme.background,
+      scaffoldBackgroundColor: colorScheme.surface,
       appBarTheme: const AppBarTheme(
         backgroundColor: primary,
         foregroundColor: Colors.white,
@@ -79,13 +75,13 @@ class ThemeService {
         centerTitle: false,
       ),
       cardColor: const Color(0xFF1E2227),
-      dialogBackgroundColor: const Color(0xFF1E2227),
       inputDecorationTheme: const InputDecorationTheme(
         border: OutlineInputBorder(),
         focusedBorder: OutlineInputBorder(
           borderSide: BorderSide(color: primary),
         ),
       ),
+      dialogTheme: DialogThemeData(backgroundColor: const Color(0xFF1E2227)),
     );
   }
 }

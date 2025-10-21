@@ -26,7 +26,9 @@ class LoginScreen extends StatelessWidget {
                 boxShadow: [
                   BoxShadow(
                     color: Theme.of(context).shadowColor.withOpacity(
-                      Theme.of(context).brightness == Brightness.dark ? 0.35 : 0.15,
+                      Theme.of(context).brightness == Brightness.dark
+                          ? 0.35
+                          : 0.15,
                     ),
                     blurRadius: 24,
                     offset: const Offset(0, 12),
@@ -60,7 +62,9 @@ class LoginScreen extends StatelessWidget {
                       labelText: 'Correo electrónico',
                       prefixIcon: const Icon(Icons.email_outlined),
                       filled: true,
-                      fillColor: Theme.of(context).colorScheme.surfaceVariant,
+                      fillColor: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
@@ -68,7 +72,9 @@ class LoginScreen extends StatelessWidget {
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide(
-                          color: Theme.of(context).colorScheme.outline.withOpacity(0.35),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.outline.withOpacity(0.35),
                         ),
                       ),
                       focusedBorder: OutlineInputBorder(
@@ -96,7 +102,9 @@ class LoginScreen extends StatelessWidget {
                         ),
                       ),
                       filled: true,
-                      fillColor: Theme.of(context).colorScheme.surfaceVariant,
+                      fillColor: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
@@ -104,7 +112,9 @@ class LoginScreen extends StatelessWidget {
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide(
-                          color: Theme.of(context).colorScheme.outline.withOpacity(0.35),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.outline.withOpacity(0.35),
                         ),
                       ),
                       focusedBorder: OutlineInputBorder(
@@ -119,7 +129,9 @@ class LoginScreen extends StatelessWidget {
                   if (controller.errorMessage != null)
                     Text(
                       controller.errorMessage!,
-                      style: TextStyle(color: Theme.of(context).colorScheme.error),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
                     ),
                   const SizedBox(height: 18),
                   MouseRegion(

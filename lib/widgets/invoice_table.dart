@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
+
 import '../models/erp_invoice.dart';
 import '../models/erp_invoice_extensions.dart';
 import '../models/ui_types.dart';
@@ -15,9 +16,7 @@ class InvoiceTable extends StatelessWidget {
   final List<ERPInvoice> invoices;
   final InvoiceCallback onView;
   final InvoiceCallback onSend;
-  final InvoiceCallback onDownload;
   final InvoiceCallback? onPreview;
-  final InvoiceCallback? onPrint;
   final SelectionCallback? onToggleSelection;
   final SelectAllCallback? onToggleSelectAll;
   final IsSelectedCallback? isSelected;
@@ -28,9 +27,7 @@ class InvoiceTable extends StatelessWidget {
     required this.invoices,
     required this.onView,
     required this.onSend,
-    required this.onDownload,
     this.onPreview,
-    this.onPrint,
     this.onToggleSelection,
     this.onToggleSelectAll,
     this.isSelected,
@@ -192,7 +189,7 @@ class InvoiceTable extends StatelessWidget {
                             bodyCell(Text(_formatMonto(_getMontoTotal(inv)))),
                             bodyCell(Text(_getFechaEmision(inv))),
                             bodyCell(
-                              _typeChip(context, _tipoComprobanteAlias(inv)),
+                              _typeChip(context, inv),
                             ),
                             bodyCell(StatusChip(status: _statusFrom(inv))),
                             bodyCell(_actionsMenu(inv)),
@@ -279,24 +276,29 @@ class InvoiceTable extends StatelessWidget {
     return inv.formattedFechaEmision;
   }
 
-  String _tipoComprobanteAlias(ERPInvoice inv) {
-    // Usar el display integrado de ERPInvoice
-    return inv.tipoComprobanteDisplay;
-  }
 
-  Widget _typeChip(BuildContext context, String alias) {
-    final cs = Theme.of(context).colorScheme;
+
+  Widget _typeChip(BuildContext context, ERPInvoice invoice) {
+    final colors = invoice.tipoComprobanteColors;
+    final alias = invoice.tipoComprobanteDisplay;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: cs.outlineVariant),
+        color: colors.backgroundColor,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: colors.borderColor, width: 1),
       ),
       child: Text(
         alias,
-        style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
+        style: TextStyle(
+          color: colors.textColor,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }
@@ -328,35 +330,20 @@ class InvoiceTable extends StatelessWidget {
           const Color(0xFF005285),
           () => onView(invoice),
         ),
-        const SizedBox(width: 6),
+        const SizedBox(width: 8),
         btn(
           FontAwesomeIcons.paperPlane,
           'Enviar',
           const Color(0xFF0072CE),
           () => onSend(invoice),
         ),
-        const SizedBox(width: 6),
-        if (onPreview != null)
+        if (onPreview != null) ...[
+          const SizedBox(width: 8),
           btn(
             FontAwesomeIcons.magnifyingGlass,
             'Vista previa',
             const Color(0xFF28a745),
             () => onPreview!(invoice),
-          ),
-        const SizedBox(width: 6),
-        btn(
-          FontAwesomeIcons.download,
-          'Descargar PDF',
-          const Color(0xFF6f42c1),
-          () => onDownload(invoice),
-        ),
-        if (onPrint != null) ...[
-          const SizedBox(width: 6),
-          btn(
-            FontAwesomeIcons.print,
-            'Imprimir',
-            const Color(0xFF17a2b8),
-            () => onPrint!(invoice),
           ),
         ],
       ],

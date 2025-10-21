@@ -1,5 +1,5 @@
-import '../lib/models/erp_invoice.dart';
-import '../lib/models/erp_invoice_extensions.dart';
+import 'package:facturacion/models/erp_invoice.dart';
+import 'package:facturacion/models/erp_invoice_extensions.dart';
 
 void main() {
   // Ejemplo con el JSON exacto que viene del ERP

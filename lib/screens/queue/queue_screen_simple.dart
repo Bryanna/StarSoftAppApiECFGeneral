@@ -1381,7 +1381,7 @@ class QueueScreenSimple extends StatelessWidget {
     final scenario = _buildScenarioPreview(invoiceData);
 
     final requestBody = {
-      "scenarios": [scenario],
+      'scenarios': [scenario],
     };
 
     return Column(
@@ -1465,49 +1465,49 @@ class QueueScreenSimple extends StatelessWidget {
     final scenario = <String, dynamic>{};
 
     // Orden correcto según XSD
-    scenario["Version"] = invoiceData['version'] ?? "1.0";
-    scenario["TipoeCF"] = "32"; // TEMPORAL
-    scenario["eNCF"] = "E320000000356"; // TEMPORAL
+    scenario['Version'] = invoiceData['version'] ?? '1.0';
+    scenario['TipoeCF'] = '32'; // TEMPORAL
+    scenario['eNCF'] = 'E320000000356'; // TEMPORAL
 
     // Datos del emisor (simulados desde Firebase)
-    scenario["RNCEmisor"] = "[RNC desde Firebase]";
-    scenario["RazonSocialEmisor"] = "[Razón Social desde Firebase]";
-    scenario["DireccionEmisor"] = "[Dirección desde Firebase]";
+    scenario['RNCEmisor'] = '[RNC desde Firebase]';
+    scenario['RazonSocialEmisor'] = '[Razón Social desde Firebase]';
+    scenario['DireccionEmisor'] = '[Dirección desde Firebase]';
 
     // Fecha de emisión
     if (invoiceData['fechaemision'] != null) {
       final fechaEmision = invoiceData['fechaemision'].toString();
       // Convertir formato de fecha de MM/dd/yyyy o dd/MM/yyyy a dd-MM-yyyy
       final formattedDate = fechaEmision.replaceAll('/', '-');
-      scenario["FechaEmision"] = formattedDate;
+      scenario['FechaEmision'] = formattedDate;
     }
 
     // Tipo de ingresos y pago
-    scenario["TipoIngresos"] = invoiceData['tipoingresos'] ?? "01";
-    scenario["TipoPago"] = invoiceData['tipopago'] ?? "1";
+    scenario['TipoIngresos'] = invoiceData['tipoingresos'] ?? '01';
+    scenario['TipoPago'] = invoiceData['tipopago'] ?? '1';
 
     // Comprador
     if (invoiceData['rnccomprador'] != null) {
-      scenario["RNCComprador"] = invoiceData['rnccomprador'];
+      scenario['RNCComprador'] = invoiceData['rnccomprador'];
     }
     if (invoiceData['razonsocialcomprador'] != null) {
-      scenario["RazonSocialComprador"] = invoiceData['razonsocialcomprador'];
+      scenario['RazonSocialComprador'] = invoiceData['razonsocialcomprador'];
     }
 
     // Totales
-    scenario["MontoTotal"] = invoiceData['montototal'] ?? "0.00";
+    scenario['MontoTotal'] = invoiceData['montototal'] ?? '0.00';
 
     // Items básicos
-    scenario["NumeroLinea[1]"] = "1";
-    scenario["IndicadorFacturacion[1]"] = "4";
-    scenario["NombreItem[1]"] = "Servicio Médico";
-    scenario["IndicadorBienoServicio[1]"] = "2";
-    scenario["CantidadItem[1]"] = "1.00";
-    scenario["PrecioUnitarioItem[1]"] = invoiceData['montototal'] ?? "0.00";
-    scenario["MontoItem[1]"] = invoiceData['montototal'] ?? "0.00";
+    scenario['NumeroLinea[1]'] = '1';
+    scenario['IndicadorFacturacion[1]'] = '4';
+    scenario['NombreItem[1]'] = 'Servicio Médico';
+    scenario['IndicadorBienoServicio[1]'] = '2';
+    scenario['CantidadItem[1]'] = '1.00';
+    scenario['PrecioUnitarioItem[1]'] = invoiceData['montototal'] ?? '0.00';
+    scenario['MontoItem[1]'] = invoiceData['montototal'] ?? '0.00';
 
     // CasoPrueba
-    scenario["CasoPrueba"] = "[RNC]E320000000213";
+    scenario['CasoPrueba'] = '[RNC]E320000000213';
 
     return scenario;
   }

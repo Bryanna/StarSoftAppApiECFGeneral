@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
-import '../../lib/models/erp_invoice.dart';
-import '../../lib/models/erp_invoice_extensions.dart';
+import 'package:facturacion/models/erp_invoice.dart';
+import 'package:facturacion/models/erp_invoice_extensions.dart';
 
 void main() {
   group('Invoice Detail Parsing from ERP', () {
@@ -166,9 +166,9 @@ void main() {
 
       // Simular el parsing que hace el PDF service
       final detalleJson =
-          invoiceMap['DetalleFactura'] as String? ??
-          invoiceMap['detalleFactura'] as String? ??
-          invoiceMap['detalle_factura'] as String?;
+          invoiceMap['DetalleFactura'] ??
+          invoiceMap['detalleFactura'] ??
+          invoiceMap['detalle_factura'];
 
       expect(detalleJson, isNotNull);
       expect(detalleJson, isNotEmpty);

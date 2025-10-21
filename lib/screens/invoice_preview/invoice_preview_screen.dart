@@ -5,11 +5,12 @@ import 'package:get/get.dart';
 import 'package:pdf/pdf.dart';
 
 import '../../models/erp_invoice.dart';
-
 import '../../services/enhanced_invoice_pdf_service.dart';
 import '../../services/company_config_service.dart';
+import '../../services/pdf_viewer_service.dart';
 import '../../widgets/pdf_viewer_widget.dart';
 
+/// Pantalla simple para ver el PDF de la factura más grande y con opciones de descarga
 class InvoicePreviewScreen extends StatefulWidget {
   const InvoicePreviewScreen({super.key});
 
@@ -20,6 +21,8 @@ class InvoicePreviewScreen extends StatefulWidget {
 class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
   Map<String, dynamic>? companyData;
   bool loading = true;
+  Uint8List? pdfBytes;
+  bool generatingPdf = false;
 
   @override
   void initState() {
@@ -35,6 +38,8 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
         companyData = data;
         loading = false;
       });
+      // Generar PDF después de cargar datos de la empresa
+      _generatePdf();
     } catch (e) {
       setState(() {
         loading = false;
@@ -42,104 +47,335 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
     }
   }
 
+  Future<void> _generatePdf() async {
+    if (generatingPdf) return;
+
+    setState(() {
+      generatingPdf = true;
+    });
+
+    try {
+      final ERPInvoice inv = Get.arguments as ERPInvoice;
+      final bytes = await _buildPdf(PdfPageFormat.a4, inv);
+      setState(() {
+        pdfBytes = bytes;
+        generatingPdf = false;
+      });
+    } catch (e) {
+      setState(() {
+        generatingPdf = false;
+      });
+      Get.snackbar(
+        'Error',
+        'No se pudo generar el PDF: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final ERPInvoice inv = Get.arguments as ERPInvoice;
-
-    // Obtener datos de la empresa
     final companyName = companyData?['razonSocial'] as String? ?? 'Empresa';
-    final companyRnc = companyData?['rnc'] as String? ?? '';
-
-    // Crear título para el AppBar (solo nombre de empresa)
-    final title = 'Factura - $companyName';
-
-    // Crear nombre de archivo más descriptivo
-    final fileName = companyRnc.isNotEmpty
-        ? 'Factura_${inv.numeroFactura.isNotEmpty ? inv.numeroFactura : 'DOC'}_$companyRnc.pdf'
-        : 'Factura_${inv.numeroFactura.isNotEmpty ? inv.numeroFactura : companyName}.pdf';
 
     return Scaffold(
+      backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
-        centerTitle: false,
-        backgroundColor: const Color(0xFF005285),
-        title: loading
-            ? const Text('Cargando...', style: TextStyle(color: Colors.white))
-            : Text(title, style: const TextStyle(color: Colors.white)),
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
-      body: loading
-          ? const Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF005285)),
-              ),
-            )
-          : FutureBuilder<Uint8List>(
-              future: _buildPdf(PdfPageFormat.a4, inv),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        Color(0xFF005285),
-                      ),
-                    ),
-                  );
-                }
-
-                if (snapshot.hasError) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.error, size: 64, color: Colors.red),
-                        const SizedBox(height: 16),
-                        Text('Error generando PDF: ${snapshot.error}'),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: () => setState(() {}),
-                          child: const Text('Reintentar'),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                return QuickPdfPreview(pdfBytes: snapshot.data!);
-              },
+        elevation: 0,
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Colors.white,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Factura - $companyName',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
+            Text(
+              inv.encf ?? 'Sin ENCF',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          // Botón de descarga
+          if (pdfBytes != null)
+            IconButton(
+              onPressed: () => _downloadPdf(inv),
+              icon: const Icon(Icons.download),
+              tooltip: 'Descargar PDF',
+            ),
+          // Botón de impresión
+          if (pdfBytes != null)
+            IconButton(
+              onPressed: () => _printPdf(inv),
+              icon: const Icon(Icons.print),
+              tooltip: 'Imprimir',
+            ),
+          // Menú adicional
+          PopupMenuButton<String>(
+            onSelected: (value) => _handleMenuAction(value, inv),
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'fullscreen',
+                child: ListTile(
+                  leading: Icon(Icons.fullscreen),
+                  title: Text('Pantalla Completa'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'share',
+                child: ListTile(
+                  leading: Icon(Icons.share),
+                  title: Text('Compartir'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'refresh',
+                child: ListTile(
+                  leading: Icon(Icons.refresh),
+                  title: Text('Regenerar PDF'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+      body: loading ? _buildLoadingState() : _buildPdfViewer(inv),
+      floatingActionButton: pdfBytes != null
+          ? FloatingActionButton.extended(
+              onPressed: () => _downloadPdf(inv),
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.download),
+              label: const Text('Descargar'),
+            )
+          : null,
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(),
+          SizedBox(height: 16),
+          Text('Cargando información de la factura...'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPdfViewer(ERPInvoice inv) {
+    if (generatingPdf) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Generando PDF...', style: TextStyle(fontSize: 16)),
+            SizedBox(height: 8),
+            Text(
+              'Por favor espera un momento',
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (pdfBytes == null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 64, color: Colors.red.shade400),
+            const SizedBox(height: 16),
+            Text(
+              'Error al generar el PDF',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.red.shade700,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'No se pudo generar el documento PDF',
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: _generatePdf,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Reintentar'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Vista previa del PDF más grande - OCUPA TODA LA PANTALLA
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      padding: const EdgeInsets.all(8),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: QuickPdfPreview(
+            pdfBytes: pdfBytes!,
+            // Hacer la vista MÁS GRANDE - ocupa casi toda la pantalla
+            width: MediaQuery.of(context).size.width - 16,
+            height: MediaQuery.of(context).size.height - 200,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Métodos de acción
+  void _handleMenuAction(String action, ERPInvoice inv) {
+    switch (action) {
+      case 'fullscreen':
+        _viewFullscreen(inv);
+        break;
+      case 'share':
+        _sharePdf(inv);
+        break;
+      case 'refresh':
+        _generatePdf();
+        break;
+    }
+  }
+
+  Future<void> _downloadPdf(ERPInvoice inv) async {
+    if (pdfBytes == null) return;
+
+    // Crear nombre de archivo con formato RNC+ENCF.pdf
+    final rnc = inv.rncemisor ?? 'SIN_RNC';
+    final encf = inv.encf ?? 'SIN_ENCF';
+    final fileName = '${rnc}${encf}.pdf';
+
+    try {
+      PdfViewerService.showPdf(
+        pdfBytes: pdfBytes!,
+        title: fileName,
+        showActions: true,
+      );
+
+      Get.snackbar(
+        'PDF Abierto',
+        'Documento abierto en el visor con opciones de descarga',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+        icon: const Icon(Icons.download, color: Colors.white),
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'No se pudo abrir el visor: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
+  }
+
+  Future<void> _printPdf(ERPInvoice inv) async {
+    if (pdfBytes == null) return;
+
+    try {
+      // Crear nombre de archivo con formato RNC+ENCF (sin .pdf para impresión)
+      final rnc = inv.rncemisor ?? 'SIN_RNC';
+      final encf = inv.encf ?? 'SIN_ENCF';
+      final fileName = '${rnc}${encf}';
+
+      await PdfViewerService.printPdf(pdfBytes: pdfBytes!, title: fileName);
+
+      Get.snackbar(
+        'Impresión',
+        'Documento enviado a impresora',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.blue,
+        colorText: Colors.white,
+        icon: const Icon(Icons.print, color: Colors.white),
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'No se pudo imprimir: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
+  }
+
+  void _viewFullscreen(ERPInvoice inv) {
+    if (pdfBytes == null) return;
+
+    // Crear nombre de archivo con formato RNC+ENCF.pdf
+    final rnc = inv.rncemisor ?? 'SIN_RNC';
+    final encf = inv.encf ?? 'SIN_ENCF';
+    final fileName = '${rnc}${encf}.pdf';
+
+    PdfViewerService.showPdfFullscreen(pdfBytes: pdfBytes!, title: fileName,
+    );
+  }
+
+  Future<void> _sharePdf(ERPInvoice inv) async {
+    if (pdfBytes == null) return;
+
+    // Crear nombre de archivo con formato RNC+ENCF.pdf
+    final rnc = inv.rncemisor ?? 'SIN_RNC';
+    final encf = inv.encf ?? 'SIN_ENCF';
+    final fileName = '${rnc}${encf}.pdf';
+
+    // Mostrar el visor con opciones de compartir
+    PdfViewerService.showPdf(
+      pdfBytes: pdfBytes!,
+      title: fileName,
+      showActions: true,
     );
   }
 
   Future<Uint8List> _buildPdf(PdfPageFormat format, ERPInvoice inv) async {
     debugPrint('');
-    debugPrint('🔥🔥🔥 BUILD PDF CALLED - INVOICE PREVIEW 🔥🔥🔥');
-    debugPrint('🔥 About to call EnhancedInvoicePdfService.buildPdf');
+    debugPrint('📄 GENERANDO PDF SIMPLE - INVOICE PREVIEW 📄');
+    debugPrint('📄 ENCF: ${inv.encf}');
+    debugPrint('📄 Cliente: ${inv.clienteNombre}');
+    debugPrint('📄 Total: ${inv.montototal}');
     debugPrint('');
 
-    // Debug de los campos del ERP
-    debugPrint('🔍 INVOICE PREVIEW DEBUG:');
-    debugPrint('🔍 encf (eCF): ${inv.encf}');
-    debugPrint(
-      '🔍 numerofacturainterna (No. Factura): ${inv.numerofacturainterna}',
-    );
-    debugPrint('🔍 tipoFacturaTitulo: "${inv.tipoFacturaTitulo}"');
-    debugPrint('🔍 aseguradora: "${inv.aseguradora}"');
-    debugPrint('🔍 nss: "${inv.nss}"');
-    debugPrint('🔍 medico: "${inv.medico}"');
-    debugPrint('🔍 cedulaMedico: "${inv.cedulaMedico}"');
-    debugPrint('🔍 fechaemision: "${inv.fechaemision}"');
-
-    // Convertir ERPInvoice a Map para el PDF service (más seguro que Datum)
+    // Convertir ERPInvoice a Map para el PDF service
     final invoiceMap = _convertERPInvoiceToMap(inv);
-
-    // Debug del map
-    debugPrint(
-      '🔍 Map tipo_factura_titulo: "${invoiceMap['tipo_factura_titulo']}"',
-    );
-    debugPrint(
-      '🔍 Map NumeroFacturaInterna: "${invoiceMap['NumeroFacturaInterna']}"',
-    );
-    debugPrint('🔍 Map FechaEmision: "${invoiceMap['FechaEmision']}"');
 
     return EnhancedInvoicePdfService.buildPdf(format, invoiceMap);
   }

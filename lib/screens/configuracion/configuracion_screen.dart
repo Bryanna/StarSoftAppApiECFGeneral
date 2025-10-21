@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'configuracion_controller.dart';
 import '../../services/theme_service.dart';
+import '../../models/erp_endpoint.dart';
 
 class ConfiguracionScreen extends StatelessWidget {
   const ConfiguracionScreen({super.key});
@@ -785,13 +786,11 @@ class _ConfigurationSection extends StatelessWidget {
 
             const SizedBox(height: 12),
 
-            // URL del ERP
-            _ConfigTextField(
-              controller: controller.urlERPEndpointCtrl,
-              label: 'URL Endpoint ERP',
-              icon: Icons.integration_instructions_outlined,
-              helperText:
-                  'URL completa del ERP (ej: http://servidor:puerto/api/invoices)',
+            // Endpoints ERP configurados
+            GetBuilder<ConfiguracionController>(
+              builder: (c) {
+                return _ERPEndpointsSection(controller: c);
+              },
             ),
 
             const SizedBox(height: 12),
@@ -1253,5 +1252,199 @@ class _OneDriveCompactConfig extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+class _ERPEndpointsSection extends StatelessWidget {
+  final ConfiguracionController controller;
+  const _ERPEndpointsSection({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: controller.hasConfiguredEndpoints
+            ? Colors.green[50]
+            : Colors.orange[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: controller.hasConfiguredEndpoints
+              ? Colors.green[300]!
+              : Colors.orange[300]!,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                controller.hasConfiguredEndpoints
+                    ? Icons.check_circle
+                    : Icons.warning,
+                color: controller.hasConfiguredEndpoints
+                    ? Colors.green[700]
+                    : Colors.orange[700],
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Endpoints ERP',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: controller.hasConfiguredEndpoints
+                      ? Colors.green[700]
+                      : Colors.orange[700],
+                ),
+              ),
+              const Spacer(),
+              TextButton.icon(
+                onPressed: controller.goToEndpointConfiguration,
+                icon: Icon(
+                  controller.hasConfiguredEndpoints ? Icons.edit : Icons.add,
+                  size: 16,
+                ),
+                label: Text(
+                  controller.hasConfiguredEndpoints ? 'Editar' : 'Configurar',
+                ),
+                style: TextButton.styleFrom(
+                  foregroundColor: controller.hasConfiguredEndpoints
+                      ? Colors.green[700]
+                      : Colors.orange[700],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          if (controller.hasConfiguredEndpoints) ...[
+            Text(
+              controller.getEndpointsStatus(),
+              style: TextStyle(fontSize: 12, color: Colors.green[600]),
+            ),
+            const SizedBox(height: 12),
+
+            // Lista de endpoints configurados
+            ...controller.configuredEndpoints.take(3).map((endpoint) {
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.green[200]!),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      _getEndpointIcon(endpoint.type),
+                      size: 16,
+                      color: Colors.green[600],
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            endpoint.name,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            '${endpoint.method} - ${endpoint.url}',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey[600],
+                              fontFamily: 'monospace',
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.green[100],
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        endpoint.type.displayName,
+                        style: TextStyle(
+                          fontSize: 9,
+                          color: Colors.green[700],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+
+            if (controller.configuredEndpoints.length > 3)
+              Text(
+                'Y ${controller.configuredEndpoints.length - 3} endpoint(s) más...',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.green[600],
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+          ] else ...[
+            Text(
+              'No hay endpoints configurados. Ve a la configuración inicial para agregar endpoints de tu ERP.',
+              style: TextStyle(fontSize: 12, color: Colors.orange[600]),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.orange[100],
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, size: 14, color: Colors.orange[700]),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Los endpoints se configuran una sola vez en el setup inicial y se sincronizan automáticamente aquí.',
+                      style: TextStyle(fontSize: 10, color: Colors.orange[700]),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  IconData _getEndpointIcon(EndpointType type) {
+    switch (type) {
+      case EndpointType.invoices:
+        return Icons.receipt_long;
+      case EndpointType.clients:
+        return Icons.people;
+      case EndpointType.products:
+        return Icons.inventory;
+      case EndpointType.services:
+        return Icons.room_service;
+      case EndpointType.payments:
+        return Icons.payment;
+      case EndpointType.custom:
+      default:
+        return Icons.api;
+    }
   }
 }

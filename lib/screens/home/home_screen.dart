@@ -120,8 +120,8 @@ class HomeScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    // Tabs
-                    _TabsBar(isWide: isWide),
+                    // Tabs dinámicos basados en tipos de ENCF
+                    _DynamicTabsBar(isWide: isWide),
                     const SizedBox(height: 16),
 
                     // Selector de rango de fechas
@@ -393,9 +393,7 @@ class HomeScreen extends StatelessWidget {
         invoices: filtered,
         onView: controller.viewDetails,
         onSend: controller.sendInvoice,
-        onDownload: controller.downloadInvoice,
         onPreview: controller.previewInvoice,
-        onPrint: controller.printInvoice,
         onToggleSelection: controller.toggleSelection,
         onToggleSelectAll: controller.toggleSelectAll,
         isSelected: controller.isSelected,
@@ -612,15 +610,17 @@ class _AccountMenuButton extends StatelessWidget {
   }
 }
 
-class _TabsBar extends StatelessWidget {
+class _DynamicTabsBar extends StatelessWidget {
   final bool isWide;
-  const _TabsBar({required this.isWide});
+  const _DynamicTabsBar({required this.isWide});
 
   @override
   Widget build(BuildContext context) {
     return GetBuilder<HomeController>(
       builder: (controller) {
-        // Siempre usamos Wrap para que los chips se ajusten y nunca hagan overflow.
+        // Generar tabs dinámicos basados en los tipos de ENCF encontrados
+        final dynamicTabs = _generateDynamicTabs(controller.invoices);
+
         return SizedBox(
           width: double.infinity,
           child: Wrap(
@@ -629,11 +629,52 @@ class _TabsBar extends StatelessWidget {
             alignment: WrapAlignment.start,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              for (final t in controller.tabs)
+              // Tab "Todos" siempre presente
+              ChoiceChip(
+                labelPadding: const EdgeInsets.symmetric(horizontal: 10),
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                selectedColor: Theme.of(context).colorScheme.primaryContainer,
+                backgroundColor: Theme.of(
+                  context,
+                ).colorScheme.surfaceContainerHighest,
+                shape: StadiumBorder(
+                  side: BorderSide(
+                    color: Theme.of(context).colorScheme.outlineVariant,
+                  ),
+                ),
+                label: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('📋', style: TextStyle(fontSize: 16)),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Todos',
+                      style: TextStyle(
+                        color:
+                            controller.currentCategory == InvoiceCategory.todos
+                            ? Theme.of(context).colorScheme.onPrimaryContainer
+                            : Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontWeight:
+                            controller.currentCategory == InvoiceCategory.todos
+                            ? FontWeight.w600
+                            : FontWeight.normal,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    _Badge(count: controller.invoices.length),
+                  ],
+                ),
+                selected: controller.currentCategory == InvoiceCategory.todos,
+                onSelected: (_) =>
+                    controller.loadCategory(InvoiceCategory.todos),
+              ),
+
+              // Tabs dinámicos por tipo de ENCF
+              for (final tab in dynamicTabs)
                 ChoiceChip(
                   labelPadding: const EdgeInsets.symmetric(horizontal: 10),
                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  selectedColor: t.category == InvoiceCategory.rechazados
+                  selectedColor: tab.category == InvoiceCategory.rechazados
                       ? Theme.of(context).colorScheme.error
                       : Theme.of(context).colorScheme.primaryContainer,
                   backgroundColor: Theme.of(
@@ -647,24 +688,29 @@ class _TabsBar extends StatelessWidget {
                   label: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      Text(tab.icon, style: const TextStyle(fontSize: 16)),
+                      const SizedBox(width: 6),
                       Text(
-                        t.label,
+                        tab.label,
                         style: TextStyle(
-                          color: controller.currentCategory == t.category
-                              ? (t.category == InvoiceCategory.rechazados
+                          color: controller.currentCategory == tab.category
+                              ? (tab.category == InvoiceCategory.rechazados
                                     ? Theme.of(context).colorScheme.onError
                                     : Theme.of(
                                         context,
                                       ).colorScheme.onPrimaryContainer)
                               : Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontWeight: controller.currentCategory == tab.category
+                              ? FontWeight.w600
+                              : FontWeight.normal,
                         ),
                       ),
                       const SizedBox(width: 6),
-                      _Badge(count: controller.countFor(t.category)),
+                      _Badge(count: tab.count),
                     ],
                   ),
-                  selected: controller.currentCategory == t.category,
-                  onSelected: (_) => controller.loadCategory(t.category),
+                  selected: controller.currentCategory == tab.category,
+                  onSelected: (_) => controller.loadCategory(tab.category),
                 ),
             ],
           ),
@@ -672,6 +718,155 @@ class _TabsBar extends StatelessWidget {
       },
     );
   }
+
+  List<_DynamicTab> _generateDynamicTabs(List<ERPInvoice> invoices) {
+    if (invoices.isEmpty) return [];
+
+    // Mapear tipos de ENCF encontrados
+    final Map<String, int> encfTypeCounts = {};
+    final Map<String, String> encfTypeLabels = {
+      '31': 'Crédito Fiscal',
+      '32': 'Consumo',
+      '33': 'Nota Débito',
+      '34': 'Nota Crédito',
+      '41': 'Compras',
+      '43': 'Gastos Menores',
+      '44': 'Regímenes Especiales',
+      '45': 'Gubernamental',
+    };
+    final Map<String, String> encfTypeIcons = {
+      '31': '💰',
+      '32': '🛒',
+      '33': '📈',
+      '34': '📉',
+      '41': '🏪',
+      '43': '💸',
+      '44': '⚖️',
+      '45': '🏛️',
+    };
+
+    // Contar tipos de ENCF
+    for (final invoice in invoices) {
+      final encfType = _extractEncfType(invoice);
+      if (encfType != null) {
+        encfTypeCounts[encfType] = (encfTypeCounts[encfType] ?? 0) + 1;
+      }
+    }
+
+    // Generar tabs dinámicos
+    final List<_DynamicTab> tabs = [];
+
+    for (final entry in encfTypeCounts.entries) {
+      final encfType = entry.key;
+      final count = entry.value;
+      final label = encfTypeLabels[encfType] ?? 'Tipo $encfType';
+      final icon = encfTypeIcons[encfType] ?? '📄';
+      final category = _mapEncfTypeToCategory(encfType);
+
+      tabs.add(
+        _DynamicTab(
+          label: label,
+          icon: icon,
+          category: category,
+          count: count,
+          encfType: encfType,
+        ),
+      );
+    }
+
+    // Agregar tabs de estado si hay facturas con esos estados
+    final enviados = invoices.where((inv) => _isEnviado(inv)).length;
+    final rechazados = invoices.where((inv) => _isRechazado(inv)).length;
+
+    if (enviados > 0) {
+      tabs.add(
+        _DynamicTab(
+          label: 'Enviados',
+          icon: '✅',
+          category: InvoiceCategory.enviados,
+          count: enviados,
+          encfType: null,
+        ),
+      );
+    }
+
+    if (rechazados > 0) {
+      tabs.add(
+        _DynamicTab(
+          label: 'Rechazados',
+          icon: '❌',
+          category: InvoiceCategory.rechazados,
+          count: rechazados,
+          encfType: null,
+        ),
+      );
+    }
+
+    return tabs;
+  }
+
+  String? _extractEncfType(ERPInvoice invoice) {
+    // Prioridad: tipoecf > extraer de encf > tipoComprobante
+    if (invoice.tipoecf != null && invoice.tipoecf!.isNotEmpty) {
+      return invoice.tipoecf!;
+    }
+
+    if (invoice.encf != null && invoice.encf!.isNotEmpty) {
+      // Extraer tipo del ENCF (ej: E320000000123 -> 32)
+      final encf = invoice.encf!;
+      if (encf.length >= 3 && encf.startsWith('E')) {
+        return encf.substring(1, 3);
+      }
+    }
+
+    if (invoice.tipoComprobante != null &&
+        invoice.tipoComprobante!.isNotEmpty) {
+      return invoice.tipoComprobante!;
+    }
+
+    return null;
+  }
+
+  InvoiceCategory _mapEncfTypeToCategory(String encfType) {
+    switch (encfType) {
+      case '31':
+      case '32':
+        return InvoiceCategory.pacientes;
+      case '33':
+        return InvoiceCategory.notasDebito;
+      case '34':
+        return InvoiceCategory.notasCredito;
+      case '43':
+        return InvoiceCategory.gastos;
+      default:
+        return InvoiceCategory.todos;
+    }
+  }
+
+  bool _isEnviado(ERPInvoice invoice) {
+    return (invoice.linkOriginal != null && invoice.linkOriginal!.isNotEmpty) ||
+        (invoice.fechahorafirma != null && invoice.fechahorafirma!.isNotEmpty);
+  }
+
+  bool _isRechazado(ERPInvoice invoice) {
+    return invoice.fAnulada == true;
+  }
+}
+
+class _DynamicTab {
+  final String label;
+  final String icon;
+  final InvoiceCategory category;
+  final int count;
+  final String? encfType;
+
+  const _DynamicTab({
+    required this.label,
+    required this.icon,
+    required this.category,
+    required this.count,
+    this.encfType,
+  });
 }
 
 class _Badge extends StatelessWidget {

@@ -1,25 +1,26 @@
-import 'package:facturacion/models/erp_invoice_extensions.dart';
-import 'package:get/get.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'dart:convert';
-import 'package:http/http.dart' as http;
-import '../../models/invoice.dart';
-import '../../models/erp_invoice.dart';
-import '../../models/ui_types.dart';
-import '../../models/tipo_comprobante.dart';
-import '../../services/invoice_service.dart';
-import '../../services/pdf_viewer_service.dart';
-import '../../routes/app_routes.dart';
-
-import 'package:pdf/pdf.dart';
-import '../../services/enhanced_invoice_pdf_service.dart';
-import '../../services/fake_data_service.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:facturacion/models/erp_invoice_extensions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:http/http.dart' as http;
+import 'package:pdf/pdf.dart';
+
+import '../../models/erp_invoice.dart';
+import '../../models/invoice.dart';
+import '../../models/tipo_comprobante.dart';
+import '../../models/ui_types.dart';
+import '../../routes/app_routes.dart';
+import '../../services/enhanced_invoice_pdf_service.dart';
+import '../../services/fake_data_service.dart';
+import '../../services/invoice_service.dart';
+import '../../services/pdf_viewer_service.dart';
 import '../../services/queue_processor_service.dart';
+import '../../widgets/enhanced_invoice_preview.dart';
+import '../../widgets/simple_invoice_modal.dart';
 
 class HomeController extends GetxController {
   final _service = InvoiceService();
@@ -287,24 +288,20 @@ class HomeController extends GetxController {
 
   // Acciones del menú
   void viewDetails(ERPInvoice invoice) {
-    // Debug: verificar qué datos tiene la factura antes de ir al preview
+    // Debug: verificar qué datos tiene la factura antes de mostrar el modal
     if (kDebugMode) {
       debugPrint('');
-      debugPrint('=== VIEW DETAILS DEBUG ===');
+      debugPrint('=== VIEW DETAILS MODAL DEBUG ===');
       debugPrint('Invoice eCF: ${invoice.encf}');
-      debugPrint(
-        'Invoice detalleFactura: ${invoice.detalleFactura?.substring(0, invoice.detalleFactura!.length > 100 ? 100 : invoice.detalleFactura!.length) ?? 'NULL'}...',
-      );
-      debugPrint('Invoice has ${invoice.detalles.length} parsed details');
-      for (int i = 0; i < invoice.detalles.length && i < 3; i++) {
-        final detail = invoice.detalles[i];
-        debugPrint('  ${i + 1}. [${detail.referencia}] ${detail.descripcion}');
-      }
-      debugPrint('=== END VIEW DETAILS DEBUG ===');
+      debugPrint('Invoice RNC Emisor: ${invoice.rncemisor}');
+      debugPrint('Invoice Cliente: ${invoice.clienteNombre}');
+      debugPrint('Invoice Total: ${invoice.montototal}');
+      debugPrint('=== END VIEW DETAILS MODAL DEBUG ===');
       debugPrint('');
     }
 
-    Get.toNamed(AppRoutes.INVOICE_PREVIEW, arguments: invoice);
+    // Mostrar modal simple en lugar de navegar a otra pantalla
+    showSimpleInvoiceModal(context: Get.context!, invoice: invoice);
   }
 
   Future<void> sendInvoice(ERPInvoice invoice) async {
@@ -349,31 +346,21 @@ class HomeController extends GetxController {
   Future<void> previewInvoice(ERPInvoice invoice) async {
     try {
       debugPrint('');
-      debugPrint('🔍🔍🔍 PREVIEW INVOICE CALLED - HOME CONTROLLER 🔍🔍🔍');
       debugPrint(
-        '🔍 About to call EnhancedInvoicePdfService.buildPdf for preview',
+        '🔍🔍🔍 ENHANCED PREVIEW INVOICE CALLED - HOME CONTROLLER 🔍🔍🔍',
       );
+      debugPrint('🔍 Using new enhanced preview with download options');
       debugPrint('');
 
-      final invoiceMap = _convertERPInvoiceToMap(invoice);
-
-      final bytes = await EnhancedInvoicePdfService.buildPdf(
-        PdfPageFormat.a4,
-        invoiceMap,
-      );
-      final name =
-          'Vista Previa - Factura ${invoice.numeroFactura.isNotEmpty ? invoice.numeroFactura : 'CENSAVID'}';
-
-      // Mostrar vista previa rápida
-      PdfViewerService.showQuickPreview(
+      // Usar la nueva vista previa mejorada
+      showEnhancedInvoicePreview(
         context: Get.context!,
-        pdfBytes: bytes,
-        title: name,
+        invoice: invoice,
       );
     } catch (e) {
       Get.snackbar(
         'Error',
-        'No se pudo generar la vista previa: $e',
+        'No se pudo abrir la vista previa: $e',
         snackPosition: SnackPosition.BOTTOM,
       );
     }
@@ -700,7 +687,7 @@ class HomeController extends GetxController {
   ) async {
     // Helper function to check if value is valid (not null, empty, or "#e")
     bool isValidValue(String? value) {
-      return value != null && value.isNotEmpty && value != "#e";
+      return value != null && value.isNotEmpty && value != '#e';
     }
 
     // Parsear detalles para los items
@@ -714,36 +701,36 @@ class HomeController extends GetxController {
     // === CAMPOS DEL XSD SOLAMENTE ===
 
     // Version (required)
-    scenario["Version"] = invoice.version ?? "1.0";
+    scenario['Version'] = invoice.version ?? '1.0';
 
     // TipoeCF (required) - TEMPORAL: usando 32 para coincidir con E32
-    scenario["TipoeCF"] = "32"; // TEMPORAL: coincide con E320000000213
+    scenario['TipoeCF'] = '32'; // TEMPORAL: coincide con E320000000213
     debugPrint('[HomeController] 🧪 USANDO TipoeCF DE PRUEBA: 32');
 
     // eNCF (required) - TEMPORAL: usando número de prueba
 
-    final encf = "E320000000286"; // NÚMERO DE PRUEBA TEMPORAL
-    scenario["ENCF"] = encf;
+    final encf = 'E320000000286'; // NÚMERO DE PRUEBA TEMPORAL
+    scenario['ENCF'] = encf;
     debugPrint('[HomeController] 🧪 USANDO eNCF DE PRUEBA: $encf');
 
     // FechaVencimientoSecuencia (required for e-CF 31)
     final fechaVencimiento = invoice.fechavencimientosecuencia;
     if (isValidValue(fechaVencimiento)) {
-      scenario["FechaVencimientoSecuencia"] = fechaVencimiento;
+      scenario['FechaVencimientoSecuencia'] = fechaVencimiento;
     }
 
     // TipoIngresos (required)
-    scenario["TipoIngresos"] = invoice.tipoingresos ?? "01";
+    scenario['TipoIngresos'] = invoice.tipoingresos ?? '01';
 
     // TipoPago (required)
-    scenario["TipoPago"] = invoice.tipopago ?? "1";
+    scenario['TipoPago'] = invoice.tipopago ?? '1';
 
     // FormaPago[1] and MontoPago[1] (if valid)
     final formaPago1 = invoice.formapago1;
-    if (isValidValue(formaPago1)) scenario["FormaPago[1]"] = formaPago1;
+    if (isValidValue(formaPago1)) scenario['FormaPago[1]'] = formaPago1;
 
     final montoPago1 = invoice.montopago1 ?? invoice.montototal;
-    if (isValidValue(montoPago1)) scenario["MontoPago[1]"] = montoPago1;
+    if (isValidValue(montoPago1)) scenario['MontoPago[1]'] = montoPago1;
 
     // === Obtener datos del emisor desde Firebase ===
     Map<String, dynamic> companyData = {};
@@ -783,114 +770,126 @@ class HomeController extends GetxController {
     // RNCEmisor (required) - prioridad a Firebase
     final rncEmisorFirebase = companyData['rnc'] as String?;
     final rncEmisor = rncEmisorFirebase ?? invoice.rncemisor;
-    if (isValidValue(rncEmisor)) scenario["RNCEmisor"] = rncEmisor;
+    if (isValidValue(rncEmisor)) scenario['RNCEmisor'] = rncEmisor;
 
     // RazonSocialEmisor (required) - prioridad a Firebase
     final razonSocialFirebase = companyData['razonSocial'] as String?;
     final razonSocialEmisor = razonSocialFirebase ?? invoice.razonsocialemisor;
-    if (isValidValue(razonSocialEmisor))
-      scenario["RazonSocialEmisor"] = razonSocialEmisor;
+    if (isValidValue(razonSocialEmisor)) {
+      scenario['RazonSocialEmisor'] = razonSocialEmisor;
+    }
 
     // DireccionEmisor (required) - prioridad a Firebase
     final direccionFirebase = companyData['direccion'] as String?;
     final direccionEmisor = direccionFirebase ?? invoice.direccionemisor;
-    if (isValidValue(direccionEmisor))
-      scenario["DireccionEmisor"] = direccionEmisor;
+    if (isValidValue(direccionEmisor)) {
+      scenario['DireccionEmisor'] = direccionEmisor;
+    }
 
     // FechaEmision (required) - siempre del invoice
     final fechaEmision = invoice.fechaemision;
-    if (isValidValue(fechaEmision))
-      scenario["FechaEmision"] = fechaEmision!.replaceAll('/', '-');
+    if (isValidValue(fechaEmision)) {
+      scenario['FechaEmision'] = fechaEmision!.replaceAll('/', '-');
+    }
 
     // === Emisor (optional fields con prioridad a Firebase) ===
 
     // NombreComercial - usar la misma razonSocial de Firebase
     final nombreComercial = razonSocialFirebase ?? invoice.nombrecomercial;
-    if (isValidValue(nombreComercial))
-      scenario["NombreComercial"] = nombreComercial;
+    if (isValidValue(nombreComercial)) {
+      scenario['NombreComercial'] = nombreComercial;
+    }
 
     // TelefonoEmisor[1] - prioridad a Firebase
     final telefonoFirebase = companyData['telefono'] as String?;
     final telefonoEmisor1 = telefonoFirebase ?? invoice.telefonoemisor1;
-    if (isValidValue(telefonoEmisor1))
-      scenario["TelefonoEmisor[1]"] = telefonoEmisor1;
+    if (isValidValue(telefonoEmisor1)) {
+      scenario['TelefonoEmisor[1]'] = telefonoEmisor1;
+    }
 
     // CorreoEmisor - prioridad a Firebase
     final correoFirebase = companyData['correo'] as String?;
     final correoEmisor = correoFirebase ?? invoice.correoemisor;
-    if (isValidValue(correoEmisor)) scenario["CorreoEmisor"] = correoEmisor;
+    if (isValidValue(correoEmisor)) scenario['CorreoEmisor'] = correoEmisor;
 
     // WebSite - prioridad a Firebase
     final webSiteFirebase = companyData['website'] as String?;
     final webSite = webSiteFirebase ?? invoice.website;
-    if (isValidValue(webSite)) scenario["WebSite"] = webSite;
+    if (isValidValue(webSite)) scenario['WebSite'] = webSite;
 
     // Campos que siguen del invoice (no están en Firebase)
     final municipio = invoice.municipio;
-    if (isValidValue(municipio)) scenario["Municipio"] = municipio;
+    if (isValidValue(municipio)) scenario['Municipio'] = municipio;
 
     final provincia = invoice.provincia;
-    if (isValidValue(provincia)) scenario["Provincia"] = provincia;
+    if (isValidValue(provincia)) scenario['Provincia'] = provincia;
 
     // === Generar CasoPrueba (RNCEmisor + eNCF) ===
-    final rncParaCaso = rncEmisor ?? "";
-    final encfParaCaso = encf ?? "";
+    final rncParaCaso = rncEmisor ?? '';
+    final encfParaCaso = encf ?? '';
     if (rncParaCaso.isNotEmpty && encfParaCaso.isNotEmpty) {
-      scenario["CasoPrueba"] = "$rncParaCaso$encfParaCaso";
+      scenario['CasoPrueba'] = '$rncParaCaso$encfParaCaso';
       debugPrint(
         '[HomeController] CasoPrueba generado: $rncParaCaso$encfParaCaso',
       );
     }
 
     final actividadEconomica = invoice.actividadeconomica;
-    if (isValidValue(actividadEconomica))
-      scenario["ActividadEconomica"] = actividadEconomica;
+    if (isValidValue(actividadEconomica)) {
+      scenario['ActividadEconomica'] = actividadEconomica;
+    }
 
     final codigoVendedor = invoice.codigovendedor;
-    if (isValidValue(codigoVendedor))
-      scenario["CodigoVendedor"] = codigoVendedor;
+    if (isValidValue(codigoVendedor)) {
+      scenario['CodigoVendedor'] = codigoVendedor;
+    }
 
     final numeroFacturaInterna = invoice.numerofacturainterna;
-    if (isValidValue(numeroFacturaInterna))
-      scenario["NumeroFacturaInterna"] = numeroFacturaInterna;
+    if (isValidValue(numeroFacturaInterna)) {
+      scenario['NumeroFacturaInterna'] = numeroFacturaInterna;
+    }
 
     // === Comprador ===
     final rncComprador = invoice.rnccomprador;
-    if (isValidValue(rncComprador)) scenario["RNCComprador"] = rncComprador;
+    if (isValidValue(rncComprador)) scenario['RNCComprador'] = rncComprador;
 
     final razonSocialComprador = invoice.razonsocialcomprador;
-    if (isValidValue(razonSocialComprador))
-      scenario["RazonSocialComprador"] = razonSocialComprador;
+    if (isValidValue(razonSocialComprador)) {
+      scenario['RazonSocialComprador'] = razonSocialComprador;
+    }
 
     final direccionComprador = invoice.direccioncomprador;
-    if (isValidValue(direccionComprador))
-      scenario["DireccionComprador"] = direccionComprador;
+    if (isValidValue(direccionComprador)) {
+      scenario['DireccionComprador'] = direccionComprador;
+    }
 
     final municipioComprador = invoice.municipiocomprador;
-    if (isValidValue(municipioComprador))
-      scenario["MunicipioComprador"] = municipioComprador;
+    if (isValidValue(municipioComprador)) {
+      scenario['MunicipioComprador'] = municipioComprador;
+    }
 
     final provinciaComprador = invoice.provinciacomprador;
-    if (isValidValue(provinciaComprador))
-      scenario["ProvinciaComprador"] = provinciaComprador;
+    if (isValidValue(provinciaComprador)) {
+      scenario['ProvinciaComprador'] = provinciaComprador;
+    }
 
     // === Totales (required) ===
-    scenario["MontoTotal"] = invoice.montototal ?? "0.00";
+    scenario['MontoTotal'] = invoice.montototal ?? '0.00';
 
     // === Totales (optional) ===
     final montoGravadoTotal = invoice.montogravadototal;
-    if (isValidValue(montoGravadoTotal) && montoGravadoTotal != "0.00") {
-      scenario["MontoGravadoTotal"] = montoGravadoTotal;
+    if (isValidValue(montoGravadoTotal) && montoGravadoTotal != '0.00') {
+      scenario['MontoGravadoTotal'] = montoGravadoTotal;
     }
 
     final montoExento = invoice.montoexento;
-    if (isValidValue(montoExento) && montoExento != "0.00") {
-      scenario["MontoExento"] = montoExento;
+    if (isValidValue(montoExento) && montoExento != '0.00') {
+      scenario['MontoExento'] = montoExento;
     }
 
     final totalItbis = invoice.totalitbis;
-    if (isValidValue(totalItbis) && totalItbis != "0.00") {
-      scenario["TotalITBIS"] = totalItbis;
+    if (isValidValue(totalItbis) && totalItbis != '0.00') {
+      scenario['TotalITBIS'] = totalItbis;
     }
 
     // === Items (SOLO campos del XSD) ===
@@ -899,52 +898,52 @@ class HomeController extends GetxController {
       final index = i + 1;
 
       // NumeroLinea (required)
-      scenario["NumeroLinea[$index]"] = detalle.referencia ?? index.toString();
+      scenario['NumeroLinea[$index]'] = detalle.referencia ?? index.toString();
 
       // IndicadorFacturacion (required)
-      scenario["IndicadorFacturacion[$index]"] = "4"; // Exento
+      scenario['IndicadorFacturacion[$index]'] = '4'; // Exento
 
       // NombreItem (required)
       final nombreItem = detalle.descripcion;
-      if (isValidValue(nombreItem)) scenario["NombreItem[$index]"] = nombreItem;
+      if (isValidValue(nombreItem)) scenario['NombreItem[$index]'] = nombreItem;
 
       // IndicadorBienoServicio (required)
-      scenario["IndicadorBienoServicio[$index]"] = "2"; // Servicio
+      scenario['IndicadorBienoServicio[$index]'] = '2'; // Servicio
 
       // CantidadItem (required)
-      scenario["CantidadItem[$index]"] = detalle.cantidad?.toString() ?? "1.00";
+      scenario['CantidadItem[$index]'] = detalle.cantidad?.toString() ?? '1.00';
 
       // UnidadMedida (optional)
-      scenario["UnidadMedida[$index]"] =
-          "47"; // Lata (código estándar para servicios médicos)
+      scenario['UnidadMedida[$index]'] =
+          '47'; // Lata (código estándar para servicios médicos)
 
       // PrecioUnitarioItem (required)
-      scenario["PrecioUnitarioItem[$index]"] =
-          detalle.precio?.toString() ?? "0.00";
+      scenario['PrecioUnitarioItem[$index]'] =
+          detalle.precio?.toString() ?? '0.00';
 
       // MontoItem (required)
-      scenario["MontoItem[$index]"] = detalle.total?.toString() ?? "0.00";
+      scenario['MontoItem[$index]'] = detalle.total?.toString() ?? '0.00';
 
       // NO incluir CoberturalItem - NO EXISTE EN EL XSD
     }
 
-    return {"scenario": scenario};
+    return {'scenario': scenario};
   }
 
   // Método para extraer el tipo de eCF
   String _extractTipoeCF(ERPInvoice invoice) {
     final encf = invoice.numeroFactura;
-    if (encf.startsWith("E31")) return "31";
-    if (encf.startsWith("E32")) return "32";
-    if (encf.startsWith("E33")) return "33";
-    if (encf.startsWith("E34")) return "34";
-    if (encf.startsWith("E41")) return "41";
-    if (encf.startsWith("E43")) return "43";
-    if (encf.startsWith("E44")) return "44";
-    if (encf.startsWith("E45")) return "45";
-    if (encf.startsWith("E46")) return "46";
-    if (encf.startsWith("E47")) return "47";
-    return "33"; // Por defecto
+    if (encf.startsWith('E31')) return '31';
+    if (encf.startsWith('E32')) return '32';
+    if (encf.startsWith('E33')) return '33';
+    if (encf.startsWith('E34')) return '34';
+    if (encf.startsWith('E41')) return '41';
+    if (encf.startsWith('E43')) return '43';
+    if (encf.startsWith('E44')) return '44';
+    if (encf.startsWith('E45')) return '45';
+    if (encf.startsWith('E46')) return '46';
+    if (encf.startsWith('E47')) return '47';
+    return '33'; // Por defecto
   }
 
   // Método para formatear fecha para el scenario

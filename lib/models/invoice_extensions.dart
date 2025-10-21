@@ -1,4 +1,3 @@
-import 'package:intl/intl.dart';
 import 'invoice.dart';
 
 /// Extensiones para el modelo Invoice para compatibilidad con código legacy

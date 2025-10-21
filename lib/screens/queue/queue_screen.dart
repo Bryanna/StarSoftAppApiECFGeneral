@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../models/invoice_queue_item.dart';
 import '../../services/firebase_queue_service.dart';

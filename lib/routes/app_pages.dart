@@ -16,6 +16,9 @@ import '../screens/configuracion/configuracion_screen.dart';
 import '../screens/pdf_maker/pdf_maker_binding.dart';
 import '../screens/pdf_maker/pdf_maker_screen.dart';
 import '../screens/queue/queue_screen_simple.dart';
+import '../screens/setup/unified_setup_screen.dart';
+import '../screens/setup/setup_access_screen.dart';
+import '../screens/schema_builder/schema_builder_screen.dart';
 import 'app_routes.dart';
 
 class AppPages {
@@ -60,5 +63,14 @@ class AppPages {
       binding: PdfMakerBinding(),
     ),
     GetPage(name: AppRoutes.QUEUE, page: () => const QueueScreenSimple()),
+    GetPage(name: AppRoutes.SETUP, page: () => const UnifiedSetupScreen()),
+    GetPage(
+      name: AppRoutes.SETUP_ACCESS,
+      page: () => const SetupAccessScreen(),
+    ),
+    GetPage(
+      name: AppRoutes.SCHEMA_BUILDER,
+      page: () => const SchemaBuilderScreen(),
+    ),
   ];
 }

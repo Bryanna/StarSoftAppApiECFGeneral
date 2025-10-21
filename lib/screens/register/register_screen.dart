@@ -239,7 +239,7 @@ class RegisterScreen extends StatelessWidget {
                                   decoration: BoxDecoration(
                                     color: Theme.of(
                                       context,
-                                    ).colorScheme.surfaceVariant,
+                                    ).colorScheme.surfaceContainerHighest,
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   alignment: Alignment.center,
@@ -277,7 +277,7 @@ class RegisterScreen extends StatelessWidget {
       labelText: label,
       errorText: errorText,
       filled: true,
-      fillColor: Theme.of(context).colorScheme.surfaceVariant,
+      fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide.none,

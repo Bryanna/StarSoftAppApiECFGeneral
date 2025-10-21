@@ -205,10 +205,12 @@ class RegisterController extends GetxController {
 
   String _messageForError(Object e) {
     final msg = e.toString();
-    if (msg.contains('email-already-in-use'))
+    if (msg.contains('email-already-in-use')) {
       return 'El correo del administrador ya está en uso.';
-    if (msg.contains('invalid-email'))
+    }
+    if (msg.contains('invalid-email')) {
       return 'Correo de administrador inválido.';
+    }
     return 'No se pudo completar el registro. Intenta nuevamente.';
   }
 

@@ -272,7 +272,7 @@ class FirebaseQueueService {
     final scenario = await _createScenarioFromData(invoiceData);
 
     final requestBody = {
-      "scenarios": [scenario],
+      'scenarios': [scenario],
     };
 
     debugPrint('[FirebaseQueueService] Enviando a DGII: ${queueItem.encf}');
@@ -307,42 +307,47 @@ class FirebaseQueueService {
     final scenario = <String, dynamic>{};
 
     // Usar los mismos valores de prueba que tienes configurados
-    scenario["Version"] = data['version'] ?? "1.0";
-    scenario["TipoeCF"] = "32"; // TEMPORAL: coincide con E320000000213
-    scenario["eNCF"] = "E320000000213"; // NÚMERO DE PRUEBA TEMPORAL
-    scenario["TipoIngresos"] = data['tipoingresos'] ?? "01";
-    scenario["TipoPago"] = data['tipopago'] ?? "1";
+    scenario['Version'] = data['version'] ?? '1.0';
+    scenario['TipoeCF'] = '32'; // TEMPORAL: coincide con E320000000213
+    scenario['eNCF'] = 'E320000000213'; // NÚMERO DE PRUEBA TEMPORAL
+    scenario['TipoIngresos'] = data['tipoingresos'] ?? '01';
+    scenario['TipoPago'] = data['tipopago'] ?? '1';
 
-    if (data['formapago1'] != null)
-      scenario["FormaPago[1]"] = data['formapago1'];
-    if (data['montopago1'] != null)
-      scenario["MontoPago[1]"] = data['montopago1'];
+    if (data['formapago1'] != null) {
+      scenario['FormaPago[1]'] = data['formapago1'];
+    }
+    if (data['montopago1'] != null) {
+      scenario['MontoPago[1]'] = data['montopago1'];
+    }
 
     // Emisor
-    if (data['rncemisor'] != null) scenario["RNCEmisor"] = data['rncemisor'];
-    if (data['razonsocialemisor'] != null)
-      scenario["RazonSocialEmisor"] = data['razonsocialemisor'];
+    if (data['rncemisor'] != null) scenario['RNCEmisor'] = data['rncemisor'];
+    if (data['razonsocialemisor'] != null) {
+      scenario['RazonSocialEmisor'] = data['razonsocialemisor'];
+    }
     if (data['fechaemision'] != null) {
       final fechaEmision = data['fechaemision'].toString();
       // Convertir formato de fecha de MM/dd/yyyy o dd/MM/yyyy a dd-MM-yyyy
       final formattedDate = fechaEmision.replaceAll('/', '-');
-      scenario["FechaEmision"] = formattedDate;
+      scenario['FechaEmision'] = formattedDate;
     }
 
     // Comprador
-    if (data['rnccomprador'] != null)
-      scenario["RNCComprador"] = data['rnccomprador'];
-    if (data['razonsocialcomprador'] != null)
-      scenario["RazonSocialComprador"] = data['razonsocialcomprador'];
+    if (data['rnccomprador'] != null) {
+      scenario['RNCComprador'] = data['rnccomprador'];
+    }
+    if (data['razonsocialcomprador'] != null) {
+      scenario['RazonSocialComprador'] = data['razonsocialcomprador'];
+    }
 
     // Totales
-    scenario["MontoTotal"] = data['montototal'] ?? "0.00";
+    scenario['MontoTotal'] = data['montototal'] ?? '0.00';
 
     // CasoPrueba
-    final rncEmisor = data['rncemisor'] ?? "";
-    final encf = "E320000000213";
+    final rncEmisor = data['rncemisor'] ?? '';
+    final encf = 'E320000000213';
     if (rncEmisor.isNotEmpty) {
-      scenario["CasoPrueba"] = "$rncEmisor$encf";
+      scenario['CasoPrueba'] = '$rncEmisor$encf';
     }
 
     // Items (simplificado)
@@ -351,16 +356,16 @@ class FirebaseQueueService {
       final detalle = detalles[i];
       final index = i + 1;
 
-      scenario["NumeroLinea[$index]"] =
+      scenario['NumeroLinea[$index]'] =
           detalle['referencia'] ?? index.toString();
-      scenario["IndicadorFacturacion[$index]"] = "4";
-      scenario["NombreItem[$index]"] = detalle['descripcion'] ?? "";
-      scenario["IndicadorBienoServicio[$index]"] = "2";
-      scenario["CantidadItem[$index]"] =
-          detalle['cantidad']?.toString() ?? "1.00";
-      scenario["PrecioUnitarioItem[$index]"] =
-          detalle['precio']?.toString() ?? "0.00";
-      scenario["MontoItem[$index]"] = detalle['total']?.toString() ?? "0.00";
+      scenario['IndicadorFacturacion[$index]'] = '4';
+      scenario['NombreItem[$index]'] = detalle['descripcion'] ?? '';
+      scenario['IndicadorBienoServicio[$index]'] = '2';
+      scenario['CantidadItem[$index]'] =
+          detalle['cantidad']?.toString() ?? '1.00';
+      scenario['PrecioUnitarioItem[$index]'] =
+          detalle['precio']?.toString() ?? '0.00';
+      scenario['MontoItem[$index]'] = detalle['total']?.toString() ?? '0.00';
     }
 
     return scenario;

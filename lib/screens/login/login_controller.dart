@@ -3,12 +3,14 @@ import 'package:get_storage/get_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:facturacion/services/firebase_auth_service.dart';
 import 'package:facturacion/services/user_service.dart';
+import 'package:facturacion/services/company_config_service.dart';
 import 'package:facturacion/routes/app_routes.dart';
 import 'package:facturacion/services/logger_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class LoginController extends GetxController {
   final FirebaseAuthService _authService = FirebaseAuthService();
+  final CompanyConfigService _companyService = CompanyConfigService();
   final box = GetStorage();
 
   // Form controllers
@@ -55,7 +57,9 @@ class LoginController extends GetxController {
       // Guardar el nombre del usuario para usar en PDFs
       await UserService.saveUserNameToStorage();
       LoggerService().info('login.success', {'email': email});
-      Get.offAllNamed(AppRoutes.HOME);
+
+      // Verificar si necesita configuración inicial
+      await _checkAndRedirectAfterLogin();
     } catch (e) {
       LoggerService().error('login.error', e, StackTrace.current, {
         'email': email,
@@ -167,7 +171,9 @@ class LoginController extends GetxController {
                                       // Guardar el nombre del usuario para usar en PDFs
                                       await UserService.saveUserNameToStorage();
                                       Get.back(); // close dialog
-                                      Get.offAllNamed(AppRoutes.HOME);
+
+                                      // Verificar si necesita configuración inicial
+                                      await _checkAndRedirectAfterLogin();
                                     } catch (e) {
                                       setState(() {
                                         dialogError = _messageForError(e);
@@ -318,6 +324,28 @@ class LoginController extends GetxController {
       ),
       barrierDismissible: true,
     );
+  }
+
+  /// Verifica si necesita configuración inicial y redirige apropiadamente
+  Future<void> _checkAndRedirectAfterLogin() async {
+    try {
+      final isComplete = await _companyService.isSetupComplete();
+
+      LoggerService().info('login.checkingSetup', {'isComplete': isComplete});
+
+      if (isComplete) {
+        LoggerService().info('login.setupComplete');
+        Get.offAllNamed(AppRoutes.HOME);
+      } else {
+        final currentStep = await _companyService.getCurrentSetupStep();
+        LoggerService().info('login.needsSetup', {'currentStep': currentStep});
+        Get.offAllNamed(AppRoutes.SETUP);
+      }
+    } catch (e) {
+      LoggerService().error('login.setupCheckError', e, null);
+      // En caso de error, asumir que necesita setup
+      Get.offAllNamed(AppRoutes.SETUP);
+    }
   }
 
   String _messageForError(Object e) {

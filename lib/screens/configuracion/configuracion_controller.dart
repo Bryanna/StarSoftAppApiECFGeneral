@@ -4,6 +4,8 @@ import 'package:get/get.dart';
 import '../../services/firestore_service.dart';
 import '../../services/firebase_auth_service.dart';
 import '../../services/logger_service.dart';
+import '../../services/erp_endpoint_service.dart';
+import '../../models/erp_endpoint.dart';
 
 enum InvoiceEnvironment { certificacion, test, produccion }
 
@@ -12,6 +14,7 @@ enum StorageType { local, googleDrive, dropbox, oneDrive }
 class ConfiguracionController extends GetxController {
   final FirestoreService _db = FirestoreService();
   final FirebaseAuthService _auth = FirebaseAuthService();
+  final ERPEndpointService _endpointService = ERPEndpointService();
 
   // Estado de carga
   bool loading = true;
@@ -45,8 +48,22 @@ class ConfiguracionController extends GetxController {
   String baseEndpointUrl =
       'https://ecfrecepcion.starsoftdominicana.com/ecf/api';
 
-  // Configuración de endpoint ERP
+  // Configuración de endpoint ERP (DEPRECATED - ahora se usan múltiples endpoints)
   String urlERPEndpoint = 'Sin configurar';
+
+  // Endpoints configurados
+  List<ERPEndpoint> _configuredEndpoints = [];
+  List<ERPEndpoint> get configuredEndpoints => _configuredEndpoints;
+
+  /// Navega a la configuración inicial de la empresa
+  void goToCompanySetup() {
+    Get.toNamed('/setup');
+  }
+
+  /// Navega al constructor de esquemas
+  void goToSchemaBuilder() {
+    Get.toNamed('/schema_builder');
+  }
 
   // Configuración de datos de prueba
   bool useFakeData = false;
@@ -67,6 +84,46 @@ class ConfiguracionController extends GetxController {
     super.onInit();
     _loadCompanyData();
   }
+
+  /// Carga los endpoints configurados desde el setup inicial
+  Future<void> _loadConfiguredEndpoints() async {
+    if (companyRnc == null) return;
+
+    try {
+      _configuredEndpoints = await _endpointService.getEndpoints(companyRnc!);
+      debugPrint(
+        '[ConfigController] Endpoints cargados: ${_configuredEndpoints.length}',
+      );
+
+      // Si hay endpoints configurados, actualizar el campo legacy
+      if (_configuredEndpoints.isNotEmpty) {
+        final primaryEndpoint = _configuredEndpoints.first;
+        urlERPEndpoint = primaryEndpoint.url;
+        urlERPEndpointCtrl.text =
+            'Configurado desde Setup (${_configuredEndpoints.length} endpoints)';
+      }
+    } catch (e) {
+      debugPrint('[ConfigController] Error cargando endpoints: $e');
+    }
+  }
+
+  /// Navega a la configuración de endpoints
+  void goToEndpointConfiguration() {
+    Get.toNamed('/setup');
+  }
+
+  /// Obtiene un resumen de los endpoints configurados
+  String getEndpointsStatus() {
+    if (_configuredEndpoints.isEmpty) {
+      return 'Sin endpoints configurados';
+    }
+
+    final types = _configuredEndpoints.map((e) => e.type.displayName).toSet();
+    return '${_configuredEndpoints.length} endpoint(s): ${types.join(', ')}';
+  }
+
+  /// Verifica si hay endpoints configurados
+  bool get hasConfiguredEndpoints => _configuredEndpoints.isNotEmpty;
 
   Future<void> _loadCompanyData() async {
     loading = true;
@@ -134,12 +191,16 @@ class ConfiguracionController extends GetxController {
 
         // Configuración de datos de prueba
         useFakeData = companyData!['useFakeData'] ?? false;
+
+        // Cargar endpoints configurados
+        await _loadConfiguredEndpoints();
       }
 
       LoggerService().info('configuracion.load_success', {
         'companyRnc': companyRnc,
         'hasSignature': digitalSignatureUrl != null,
         'hasLogo': companyLogoUrl != null,
+        'endpointsCount': _configuredEndpoints.length,
       });
     } catch (e, st) {
       LoggerService().error('configuracion.load_error', e, st);
@@ -559,10 +620,12 @@ class ConfiguracionController extends GetxController {
       // Configuración de endpoint
       updateData['baseEndpointUrl'] = baseEndpointCtrl.text.trim();
 
-      // Configuración de endpoint ERP
-      updateData['urlERPEndpoint'] = urlERPEndpointCtrl.text.trim().isEmpty
-          ? 'Sin configurar'
-          : urlERPEndpointCtrl.text.trim();
+      // Configuración de endpoint ERP (DEPRECATED - no sobrescribir si hay endpoints configurados)
+      if (_configuredEndpoints.isEmpty) {
+        updateData['urlERPEndpoint'] = urlERPEndpointCtrl.text.trim().isEmpty
+            ? 'Sin configurar'
+            : urlERPEndpointCtrl.text.trim();
+      }
 
       // Configuración de datos de prueba
       updateData['useFakeData'] = useFakeData;

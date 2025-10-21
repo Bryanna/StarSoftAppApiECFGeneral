@@ -249,7 +249,7 @@ class QueueProcessorService {
     final scenario = await _createScenario(invoiceData);
 
     final requestBody = {
-      "scenarios": [scenario],
+      'scenarios': [scenario],
     };
 
     // === LOGS DETALLADOS DEL REQUEST ===
@@ -367,15 +367,15 @@ class QueueProcessorService {
     // === ORDEN CORRECTO SEGÚN XSD ===
 
     // 1. Version (required)
-    scenario["Version"] = invoiceData['version'] ?? "1.0";
+    scenario['Version'] = invoiceData['version'] ?? '1.0';
 
     // 2. TipoeCF (required) - Extraer del NCF del ERP
     final tipoeCF = _extractTipoeCF(invoiceData);
-    scenario["TipoeCF"] = tipoeCF;
+    scenario['TipoeCF'] = tipoeCF;
 
     // 3. ENCF (required) - Generar único basado en NCF del ERP
     final encf = _generateUniqueENCF(invoiceData);
-    scenario["ENCF"] = encf;
+    scenario['ENCF'] = encf;
 
     // === Obtener datos del emisor desde Firebase ===
     Map<String, dynamic> companyData = {};
@@ -414,9 +414,9 @@ class QueueProcessorService {
 
     // RNCEmisor (required)
     final rncEmisorFirebase = companyData['rnc'] as String?;
-    final rncEmisor = rncEmisorFirebase ?? invoiceData['rncemisor'] ?? "";
+    final rncEmisor = rncEmisorFirebase ?? invoiceData['rncemisor'] ?? '';
     if (rncEmisor.isNotEmpty) {
-      scenario["RNCEmisor"] = rncEmisor;
+      scenario['RNCEmisor'] = rncEmisor;
       debugPrint(
         '[QueueProcessor] 🏢 RNCEmisor: $rncEmisor (Firebase: ${rncEmisorFirebase != null})',
       );
@@ -425,9 +425,9 @@ class QueueProcessorService {
     // RazonSocialEmisor (required)
     final razonSocialFirebase = companyData['razonSocial'] as String?;
     final razonSocialEmisor =
-        razonSocialFirebase ?? invoiceData['razonsocialemisor'] ?? "";
+        razonSocialFirebase ?? invoiceData['razonsocialemisor'] ?? '';
     if (razonSocialEmisor.isNotEmpty) {
-      scenario["RazonSocialEmisor"] = razonSocialEmisor;
+      scenario['RazonSocialEmisor'] = razonSocialEmisor;
       debugPrint(
         '[QueueProcessor] 🏢 RazonSocialEmisor: $razonSocialEmisor (Firebase: ${razonSocialFirebase != null})',
       );
@@ -436,7 +436,7 @@ class QueueProcessorService {
     // DireccionEmisor
     final direccionFirebase = companyData['direccion'] as String?;
     if (direccionFirebase != null && direccionFirebase.isNotEmpty) {
-      scenario["DireccionEmisor"] = direccionFirebase;
+      scenario['DireccionEmisor'] = direccionFirebase;
     }
 
     // === 5. FECHA DE EMISIÓN ===
@@ -444,39 +444,39 @@ class QueueProcessorService {
       final fechaEmision = invoiceData['fechaemision'].toString();
       // Convertir formato de fecha de MM/dd/yyyy o dd/MM/yyyy a dd-MM-yyyy
       final formattedDate = _formatDateForDGII(fechaEmision);
-      scenario["FechaEmision"] = formattedDate;
+      scenario['FechaEmision'] = formattedDate;
     }
 
     // === 6. TIPO DE INGRESOS Y PAGO (DESPUÉS DEL EMISOR) ===
-    scenario["TipoIngresos"] = invoiceData['tipoingresos'] ?? "01";
-    scenario["TipoPago"] = invoiceData['tipopago'] ?? "1";
+    scenario['TipoIngresos'] = invoiceData['tipoingresos'] ?? '01';
+    scenario['TipoPago'] = invoiceData['tipopago'] ?? '1';
 
     // === 7. DATOS DEL COMPRADOR ===
     if (invoiceData['rnccomprador'] != null) {
-      scenario["RNCComprador"] = invoiceData['rnccomprador'];
+      scenario['RNCComprador'] = invoiceData['rnccomprador'];
     }
     if (invoiceData['razonsocialcomprador'] != null) {
-      scenario["RazonSocialComprador"] = invoiceData['razonsocialcomprador'];
+      scenario['RazonSocialComprador'] = invoiceData['razonsocialcomprador'];
     }
 
     // === 8. TOTALES ===
-    scenario["MontoTotal"] = invoiceData['montototal'] ?? "0.00";
+    scenario['MontoTotal'] = invoiceData['montototal'] ?? '0.00';
 
     // === 9. CASO DE PRUEBA (AL FINAL) ===
-    final encfForCase = scenario["ENCF"] ?? "";
+    final encfForCase = scenario['ENCF'] ?? '';
     if (rncEmisor.isNotEmpty && encfForCase.isNotEmpty) {
-      scenario["CasoPrueba"] = "$rncEmisor$encfForCase";
+      scenario['CasoPrueba'] = '$rncEmisor$encfForCase';
       debugPrint('[QueueProcessor] 🎯 CasoPrueba: $rncEmisor$encfForCase');
     }
 
     // Items básicos (simplificado)
-    scenario["NumeroLinea[1]"] = "1";
-    scenario["IndicadorFacturacion[1]"] = "4";
-    scenario["NombreItem[1]"] = "Servicio Médico";
-    scenario["IndicadorBienoServicio[1]"] = "2";
-    scenario["CantidadItem[1]"] = "1.00";
-    scenario["PrecioUnitarioItem[1]"] = invoiceData['montototal'] ?? "0.00";
-    scenario["MontoItem[1]"] = invoiceData['montototal'] ?? "0.00";
+    scenario['NumeroLinea[1]'] = '1';
+    scenario['IndicadorFacturacion[1]'] = '4';
+    scenario['NombreItem[1]'] = 'Servicio Médico';
+    scenario['IndicadorBienoServicio[1]'] = '2';
+    scenario['CantidadItem[1]'] = '1.00';
+    scenario['PrecioUnitarioItem[1]'] = invoiceData['montototal'] ?? '0.00';
+    scenario['MontoItem[1]'] = invoiceData['montototal'] ?? '0.00';
 
     return scenario;
   }

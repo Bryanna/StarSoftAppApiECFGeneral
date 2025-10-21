@@ -1,21 +1,25 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 
-import '../models/invoice.dart';
+import '../models/erp_endpoint.dart';
 import '../models/erp_invoice.dart';
 import '../models/erp_invoice_extensions.dart';
+import '../models/invoice.dart';
 import '../models/ui_types.dart';
-import 'fake_data_service.dart';
 import '../screens/configuracion/configuracion_controller.dart';
-import 'firestore_service.dart';
+import 'erp_endpoint_service.dart';
+import 'fake_data_service.dart';
 import 'firebase_auth_service.dart';
+import 'firestore_service.dart';
 
 class InvoiceService {
   final FirestoreService _db = FirestoreService();
   final FirebaseAuthService _auth = FirebaseAuthService();
+  final ERPEndpointService _endpointService = ERPEndpointService();
 
   // Obtiene facturas reales desde el endpoint ERP configurado o datos fake
   Future<List<ERPInvoice>> fetchInvoices(InvoiceCategory category) async {
@@ -28,16 +32,24 @@ class InvoiceService {
         return await _generateFakeInvoices(category);
       }
 
-      // Intentar obtener datos reales del ERP
-      debugPrint('[InvoiceService] Attempting to fetch real data from ERP');
-      final erpUrl = await _getERPUrl();
+      // Intentar obtener datos reales del ERP usando endpoints configurados
+      debugPrint(
+        '[InvoiceService] Attempting to fetch real data from ERP endpoints',
+      );
+      final endpoints = await _getConfiguredEndpoints();
 
-      if (erpUrl == null || erpUrl.isEmpty || erpUrl == 'Sin configurar') {
-        throw ERPNotConfiguredException('URL del ERP no configurado');
+      if (endpoints.isEmpty) {
+        throw ERPNotConfiguredException('No hay endpoints ERP configurados');
       }
 
+      // Usar el primer endpoint de facturas o el primero disponible
+      final invoiceEndpoint = endpoints.firstWhere(
+        (e) => e.type == EndpointType.invoices,
+        orElse: () => endpoints.first,
+      );
+
       // Realizar llamada HTTP al ERP
-      return await _fetchFromERP(erpUrl, category);
+      return await _fetchFromERP(invoiceEndpoint.url, category);
     } on ERPNotConfiguredException {
       rethrow;
     } on NoInvoicesFoundException {
@@ -85,32 +97,28 @@ class InvoiceService {
     }
   }
 
-  // Obtiene la URL del ERP desde la configuración
-  Future<String?> _getERPUrl() async {
+  // Obtiene los endpoints configurados del ERP
+  Future<List<ERPEndpoint>> _getConfiguredEndpoints() async {
     try {
-      // Primero intentar obtener del controller si está registrado
-      if (Get.isRegistered<ConfiguracionController>()) {
-        final controller = Get.find<ConfiguracionController>();
-        return controller.urlERPEndpoint;
-      }
-
-      // Si no está registrado, obtener directamente de Firestore
       final uid = _auth.currentUser?.uid;
-      if (uid == null) return null;
+      if (uid == null) return [];
 
       final userDoc = await _db.doc('users/$uid').get();
       final userData = userDoc.data();
       final companyRnc = userData?['companyRnc'] as String?;
 
-      if (companyRnc == null) return null;
+      if (companyRnc == null) return [];
 
-      final companyDoc = await _db.doc('companies/$companyRnc').get();
-      final companyData = companyDoc.data();
+      // Obtener endpoints configurados
+      final endpoints = await _endpointService.getEndpoints(companyRnc);
+      debugPrint(
+        '[InvoiceService] Found ${endpoints.length} configured endpoints',
+      );
 
-      return companyData?['urlERPEndpoint'] as String?;
+      return endpoints;
     } catch (e) {
-      debugPrint('[InvoiceService] Error getting ERP URL: $e');
-      return null;
+      debugPrint('[InvoiceService] Error getting configured endpoints: $e');
+      return [];
     }
   }
 

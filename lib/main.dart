@@ -1,24 +1,21 @@
 import 'package:facturacion/screens/splash/splash_screen.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:get_storage/get_storage.dart';
-import 'firebase_options.dart';
-import 'services/logger_service.dart';
+import 'package:google_fonts/google_fonts.dart';
 
+import 'firebase_options.dart';
 import 'routes/app_pages.dart';
-import 'screens/home/home_binding.dart';
-import 'screens/home/home_screen.dart';
 import 'screens/splash/splash_binding.dart';
+import 'services/logger_service.dart';
 import 'services/theme_service.dart';
-import 'services/firebase_queue_service.dart';
-import 'services/queue_processor_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Inicializa GetStorage para usar localStorage/web (persistencia de sesión)
   await GetStorage.init();
+  // await GetStorage().erase();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   // Inicializar servicios (singleton se inicializa automáticamente)

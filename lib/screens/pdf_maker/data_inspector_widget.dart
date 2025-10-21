@@ -302,8 +302,9 @@ class DataInspectorWidget extends StatelessWidget {
       if (RegExp(r'^\d{2}/\d{2}/\d{4}$').hasMatch(value)) return 'date';
       if (RegExp(r'^\d+\.?\d*$').hasMatch(value)) return 'number';
       if (value.toLowerCase().contains('tel') ||
-          value.toLowerCase().contains('phone'))
+          value.toLowerCase().contains('phone')) {
         return 'phone';
+      }
       return 'text';
     }
     if (value is int) return 'integer';
