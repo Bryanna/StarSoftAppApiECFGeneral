@@ -405,7 +405,12 @@ class HomeScreen extends StatelessWidget {
         onView: controller.viewDetails,
         onSend: controller.sendInvoice,
         onPreview: controller.previewInvoice,
-        onPreviewArsHeader: controller.previewArsHeader,
+        onPreviewArsHeader: controller.currentCategory == InvoiceCategory.ars
+            ? controller.previewArsHeader
+            : null,
+        onPreviewArsDetail: controller.currentCategory == InvoiceCategory.ars
+            ? controller.previewArsDetail
+            : null,
         onToggleSelection: controller.toggleSelection,
         onToggleSelectAll: controller.toggleSelectAll,
         isSelected: controller.isSelected,

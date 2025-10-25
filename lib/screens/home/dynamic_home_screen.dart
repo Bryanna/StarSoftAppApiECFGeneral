@@ -145,6 +145,7 @@ class DynamicHomeScreen extends StatelessWidget {
                         onSend: _sendInvoice,
                         onPreview: _previewInvoice,
                         onPreviewArsHeader: _previewArsHeader,
+                        onPreviewArsDetail: _previewArsDetail,
                       ),
                     ),
                   ],
@@ -182,6 +183,19 @@ class DynamicHomeScreen extends StatelessWidget {
       Get.snackbar(
         'Error',
         'No se pudo abrir el encabezado ARS',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
+  void _previewArsDetail(ERPInvoice invoice) {
+    try {
+      final hc = Get.find<HomeController>();
+      hc.previewArsDetail(invoice);
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'No se pudo abrir el detalle ARS',
         snackPosition: SnackPosition.BOTTOM,
       );
     }

@@ -11,6 +11,7 @@ class DynamicDataTable extends StatelessWidget {
   final Function(ERPInvoice) onSend;
   final Function(ERPInvoice) onPreview;
   final Function(ERPInvoice)? onPreviewArsHeader;
+  final Function(ERPInvoice)? onPreviewArsDetail;
 
   const DynamicDataTable({
     super.key,
@@ -18,6 +19,7 @@ class DynamicDataTable extends StatelessWidget {
     required this.onSend,
     required this.onPreview,
     this.onPreviewArsHeader,
+    this.onPreviewArsDetail,
   });
 
   @override
@@ -32,7 +34,7 @@ class DynamicDataTable extends StatelessWidget {
         final filteredInvoices = controller.getSearchFilteredInvoices();
 
         // Determinar si estamos en el tab ARS
-        final isArsTab = controller.currentTab?.category == InvoiceCategory.ars ||
+        final isArsTab =
             (controller.currentTab?.tabType?.toLowerCase().contains('ars') ?? false);
 
         // Mostrar tabla de facturas
@@ -52,6 +54,7 @@ class DynamicDataTable extends StatelessWidget {
             onSend: onSend,
             onPreview: onPreview,
             onPreviewArsHeader: isArsTab ? onPreviewArsHeader : null,
+            onPreviewArsDetail: isArsTab ? onPreviewArsDetail : null,
             onToggleSelection: controller.toggleSelection,
             onToggleSelectAll: controller.toggleSelectAll,
             isSelected: controller.isSelected,

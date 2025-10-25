@@ -18,6 +18,7 @@ class InvoiceTable extends StatelessWidget {
   final InvoiceCallback onSend;
   final InvoiceCallback? onPreview;
   final InvoiceCallback? onPreviewArsHeader;
+  final InvoiceCallback? onPreviewArsDetail;
   final SelectionCallback? onToggleSelection;
   final SelectAllCallback? onToggleSelectAll;
   final IsSelectedCallback? isSelected;
@@ -30,6 +31,7 @@ class InvoiceTable extends StatelessWidget {
     required this.onSend,
     this.onPreview,
     this.onPreviewArsHeader,
+    this.onPreviewArsDetail,
     this.onToggleSelection,
     this.onToggleSelectAll,
     this.isSelected,
@@ -324,19 +326,32 @@ class InvoiceTable extends StatelessWidget {
     final tabType = invoice.tipoTabEnvioFactura?.toLowerCase();
     if (tabType != null && tabType.contains('ars')) return true;
 
-    // 2) Heurística por ENCF/tipoecf como fallback (compatibilidad)
+    // 2) Señales médicas/ARS en la propia factura
+    final aseguradora = (invoice.aseguradora ?? '').trim();
+    final tipoTitulo = (invoice.tipoFacturaTitulo ?? '').toLowerCase();
+    final autorizacion = (invoice.noAutorizacion ?? '').trim();
+    final nss = (invoice.nss ?? '').trim();
+    final medico = (invoice.medico ?? '').trim();
+
+    if (aseguradora.isNotEmpty) return true;
+    if (tipoTitulo.contains('ars')) return true;
+    if (autorizacion.isNotEmpty && nss.isNotEmpty) return true; // suele venir en ARS
+    if (medico.isNotEmpty && (aseguradora.isNotEmpty || autorizacion.isNotEmpty)) return true;
+
+    // 3) Heurística por ENCF/tipoecf como fallback (compatibilidad)
     final encf = (invoice.encf ?? '').toUpperCase();
     if (encf.length >= 3) {
       final prefix = encf.substring(0, 3);
-      if (['E41', 'B11', 'C11', 'P11'].contains(prefix)) return true;
+      // Mantener compatibilidad con mapeos existentes si aplican
+      if (["E41", "B11", "C11", "P11"].contains(prefix)) return true;
     }
     final tipo = (invoice.tipoecf ?? '').toUpperCase();
     if (tipo.isNotEmpty) {
       if (RegExp(r'^\d+$').hasMatch(tipo)) {
         final mapped = 'B${tipo.padLeft(2, '0')}';
-        return ['E41', 'B11', 'C11', 'P11'].contains(mapped);
+        return ["E41", "B11", "C11", "P11"].contains(mapped);
       }
-      return ['E41', 'B11', 'C11', 'P11'].contains(tipo);
+      return ["E41", "B11", "C11", "P11"].contains(tipo);
     }
     return false;
   }
@@ -384,13 +399,23 @@ class InvoiceTable extends StatelessWidget {
             () => onPreview!(invoice),
           ),
         ],
-        if (onPreviewArsHeader != null && _isArsInvoice(invoice)) ...[
+        // Mostrar acciones ARS únicamente si los callbacks están habilitados (tab ARS)
+        if (onPreviewArsHeader != null) ...[
           const SizedBox(width: 8),
           btn(
             FontAwesomeIcons.idBadge,
             'Encabezado ARS',
             const Color(0xFF6f42c1),
             () => onPreviewArsHeader!(invoice),
+          ),
+        ],
+        if (onPreviewArsDetail != null) ...[
+          const SizedBox(width: 8),
+          btn(
+            FontAwesomeIcons.tableCellsLarge,
+            'Detalle ARS',
+            const Color(0xFF9c27b0),
+            () => onPreviewArsDetail!(invoice),
           ),
         ],
       ],

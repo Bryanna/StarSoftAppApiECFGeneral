@@ -20,6 +20,7 @@ import '../../services/invoice_service.dart';
 import '../../services/pdf_viewer_service.dart';
 import '../../services/queue_processor_service.dart';
 import '../../services/ars_header_pdf_service.dart';
+import '../../services/ars_detail_pdf_service.dart';
 import '../../widgets/enhanced_invoice_preview.dart';
 import '../../widgets/simple_invoice_modal.dart';
 
@@ -495,6 +496,26 @@ class HomeController extends GetxController {
       Get.snackbar(
         'Error',
         'No se pudo generar el encabezado ARS: $e',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
+  Future<void> previewArsDetail(ERPInvoice invoice) async {
+    try {
+      final bytes = await ArsDetailPdfService.buildDetailPdf(
+        PdfPageFormat.a4,
+        invoice,
+      );
+      PdfViewerService.showQuickPreview(
+        context: Get.context!,
+        pdfBytes: bytes,
+        title: 'Detalle ARS - ${invoice.numeroFactura}',
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'No se pudo generar el detalle ARS: $e',
         snackPosition: SnackPosition.BOTTOM,
       );
     }
