@@ -326,7 +326,7 @@ class _EnhancedInvoicePreviewState extends State<EnhancedInvoicePreview> {
       // Crear nombre de archivo con formato RNC+ENCF (sin .pdf para impresión)
       final rnc = widget.invoice.rncemisor ?? 'SIN_RNC';
       final encf = widget.invoice.encf ?? 'SIN_ENCF';
-      final fileName = '${rnc}${encf}';
+      final fileName = '$rnc$encf';
 
       await PdfViewerService.printPdf(pdfBytes: pdfBytes!, title: fileName);
 
@@ -356,7 +356,7 @@ class _EnhancedInvoicePreviewState extends State<EnhancedInvoicePreview> {
       // Crear nombre de archivo con formato RNC+ENCF.pdf
       final rnc = widget.invoice.rncemisor ?? 'SIN_RNC';
       final encf = widget.invoice.encf ?? 'SIN_ENCF';
-      final fileName = '${rnc}${encf}.pdf';
+      final fileName = '$rnc$encf.pdf';
 
       // Cerrar el diálogo y mostrar el visor completo con opciones de descarga
       Navigator.of(context).pop();
@@ -392,7 +392,7 @@ class _EnhancedInvoicePreviewState extends State<EnhancedInvoicePreview> {
     // Crear nombre de archivo con formato RNC+ENCF.pdf
     final rnc = widget.invoice.rncemisor ?? 'SIN_RNC';
     final encf = widget.invoice.encf ?? 'SIN_ENCF';
-    final fileName = '${rnc}${encf}.pdf';
+    final fileName = '$rnc$encf.pdf';
 
     Navigator.of(context).pop();
 

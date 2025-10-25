@@ -227,6 +227,7 @@ class Datum {
   dynamic tablaformaspago;
   dynamic detalleFactura;
   String? tipoTabEnvioFactura;
+  num? estado;
 
   Datum({
     this.fFacturaSecuencia,
@@ -419,6 +420,7 @@ class Datum {
     this.tablaformaspago,
     this.detalleFactura,
     this.tipoTabEnvioFactura,
+    this.estado,
   });
 
   factory Datum.fromJson(Map<String, dynamic> json) => Datum(
@@ -635,6 +637,7 @@ class Datum {
     tablaformaspago: json['tablaformaspago'],
     detalleFactura: json['detalle_factura'],
     tipoTabEnvioFactura: json['tipo_tab_envio_factura'],
+    estado: json['estado'],
   );
 
   Map<String, dynamic> toJson() => {
@@ -847,6 +850,7 @@ class Datum {
     'tablaformaspago': tablaformaspago,
     'detalle_factura': detalleFactura,
     'tipo_tab_envio_factura': tipoTabEnvioFactura,
+    'estado': estado,
   };
 }
 

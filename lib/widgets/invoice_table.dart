@@ -241,6 +241,20 @@ class InvoiceTable extends StatelessWidget {
   }
 
   DisplayStatus _statusFrom(ERPInvoice inv) {
+    // Priorizar el estado del endpoint (1: Pendiente, 2: Rechazado, 3: Enviado)
+    final code = inv.estadoCode;
+    if (code != null) {
+      switch (code) {
+        case 1:
+          return DisplayStatus.pendiente;
+        case 2:
+          return DisplayStatus.rechazada;
+        case 3:
+          return DisplayStatus.enviado;
+      }
+    }
+
+    // Fallback al comportamiento anterior si no viene el estado
     if (inv.fAnulada == true) return DisplayStatus.rechazada;
     if (inv.fPagada == true) return DisplayStatus.aprobada;
     final enviado =

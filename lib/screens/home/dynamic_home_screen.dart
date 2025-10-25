@@ -85,6 +85,20 @@ class DynamicHomeScreen extends StatelessWidget {
               ],
             ),
             actions: [
+              // Botón de Debug (solo en desarrollo)
+              IconButton(
+                icon: const Icon(Icons.bug_report),
+                tooltip: 'Debug Tabs',
+                onPressed: () {
+                  controller.debugPrintState();
+                  Get.snackbar(
+                    'Debug',
+                    'Estado impreso en consola. Tabs: ${controller.dynamicTabs.length}',
+                    backgroundColor: Colors.blue[100],
+                    colorText: Colors.blue[700],
+                  );
+                },
+              ),
               // Botón de Cola
               IconButton(
                 icon: const Icon(Icons.queue),

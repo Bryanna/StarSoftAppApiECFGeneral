@@ -3,7 +3,6 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pdf/pdf.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import '../../models/erp_invoice.dart';
 import '../../services/enhanced_invoice_pdf_service.dart';

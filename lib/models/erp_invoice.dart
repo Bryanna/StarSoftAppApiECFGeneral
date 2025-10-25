@@ -191,6 +191,7 @@ class ERPInvoice {
   final String? tablaformaspago;
   final String? detalleFactura;
   final String? tipoTabEnvioFactura;
+  final int? estadoCode;
 
   // Nuevos campos del ERP actualizado
   final String? rncPaciente;
@@ -393,6 +394,7 @@ class ERPInvoice {
     this.tablaformaspago,
     this.detalleFactura,
     this.tipoTabEnvioFactura,
+    this.estadoCode,
 
     // Nuevos campos del ERP actualizado
     this.rncPaciente,
@@ -734,7 +736,14 @@ class ERPInvoice {
           json['detalle_factura']?.toString(),
       tipoTabEnvioFactura:
           json['TipoTabEnvioFactura']?.toString() ??
-          json['tipoTabEnvioFactura']?.toString(),
+          json['tipoTabEnvioFactura']?.toString() ??
+          json['tipo_tab_envio_factura']?.toString(),
+      estadoCode: (() {
+        final v = json['Estado'] ?? json['estado'];
+        if (v is num) return v.toInt();
+        if (v is String) return int.tryParse(v);
+        return null;
+      })(),
 
       // Nuevos campos del ERP actualizado
       rncPaciente: json['rnc_paciente']?.toString(),
@@ -772,7 +781,18 @@ class ERPInvoice {
   double get exentoAmount => _parseAmount(montoexento);
 
   // Estado de la factura
-  String get estado => 'Procesada'; // Por defecto, ya que viene del ERP
+  String get estado {
+    switch (estadoCode) {
+      case 1:
+        return 'Pendiente';
+      case 2:
+        return 'Rechazado';
+      case 3:
+        return 'Enviado';
+      default:
+        return 'Procesada';
+    }
+  }
 
   // Información de contacto
   String get clienteEmail => correocomprador ?? '';

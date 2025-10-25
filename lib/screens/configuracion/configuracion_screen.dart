@@ -776,13 +776,35 @@ class _ConfigurationSection extends StatelessWidget {
 
             const SizedBox(height: 16),
 
-            // URL del servicio
+            // URL del servicio de facturación
             _ConfigTextField(
               controller: controller.baseEndpointCtrl,
-              label: 'URL Base del API',
+              label: 'URL Base del API de Facturación',
               icon: Icons.link_outlined,
-              helperText: 'URL principal del servicio de facturación',
+              helperText:
+                  'URL principal del servicio de facturación electrónica',
               readonly: false,
+            ),
+
+            const SizedBox(height: 12),
+
+            // URL base del ERP
+            _ConfigTextField(
+              controller: controller.baseERPUrlCtrl,
+              label: 'URL Base del ERP',
+              icon: Icons.dns_outlined,
+              helperText:
+                  'URL base de tu sistema ERP (ej: http://137.184.7.44:3390/api)',
+              readonly: false,
+            ),
+
+            const SizedBox(height: 12),
+
+            // Endpoints específicos del ERP
+            GetBuilder<ConfiguracionController>(
+              builder: (c) {
+                return _ERPEndpointsConfigSection(controller: c);
+              },
             ),
 
             const SizedBox(height: 12),
@@ -1264,6 +1286,307 @@ class _OneDriveCompactConfig extends StatelessWidget {
   }
 }
 
+class _ERPEndpointsConfigSection extends StatelessWidget {
+  final ConfiguracionController controller;
+  const _ERPEndpointsConfigSection({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.blue[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.blue[300]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.api_outlined, color: Colors.blue[700], size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Endpoints del ERP',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.blue[700],
+                ),
+              ),
+              const Spacer(),
+              TextButton.icon(
+                onPressed: () => _showAddEndpointDialog(context),
+                icon: const Icon(Icons.add, size: 16),
+                label: const Text('Agregar'),
+                style: TextButton.styleFrom(foregroundColor: Colors.blue[700]),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          Text(
+            'Configura los endpoints específicos de tu ERP. La URL base se combinará con cada endpoint.',
+            style: TextStyle(fontSize: 12, color: Colors.blue[600]),
+          ),
+          const SizedBox(height: 8),
+
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.green[50],
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: Colors.green[200]!),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.auto_awesome, size: 14, color: Colors.green[700]),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Los cambios se guardan automáticamente mientras escribes',
+                    style: TextStyle(fontSize: 11, color: Colors.green[700]),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Lista de endpoints configurados
+          ...controller.erpEndpoints.entries.map((entry) {
+            return Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: Colors.blue[200]!),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.blue[100],
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          entry.key.toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.blue[700],
+                          ),
+                        ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        onPressed: () => controller.removeEndpoint(entry.key),
+                        icon: const Icon(Icons.delete_outline, size: 16),
+                        color: Colors.red[600],
+                        constraints: const BoxConstraints(
+                          minWidth: 32,
+                          minHeight: 32,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: GetBuilder<ConfiguracionController>(
+                          builder: (c) {
+                            return TextField(
+                              controller: c.endpointControllers[entry.key],
+                              decoration: InputDecoration(
+                                labelText: 'Ruta del endpoint',
+                                hintText: '/api/endpoint',
+                                border: const OutlineInputBorder(),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                                isDense: true,
+                                suffixIcon: Icon(
+                                  Icons.save_outlined,
+                                  size: 16,
+                                  color: Colors.green[600],
+                                ),
+                              ),
+                              style: const TextStyle(fontSize: 12),
+                              onChanged: (value) {
+                                c.updateEndpoint(entry.key, value);
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.green[50],
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: Colors.green[200]!),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.link, size: 12, color: Colors.green[700]),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            'URL completa: ${controller.getFullEndpointUrl(entry.key)}',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontFamily: 'monospace',
+                              color: Colors.green[700],
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+
+          if (controller.erpEndpoints.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: Colors.grey[300]!),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, size: 16, color: Colors.grey[600]),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'No hay endpoints configurados. Agrega endpoints para conectar con tu ERP.',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddEndpointDialog(BuildContext context) {
+    final nameController = TextEditingController();
+    final pathController = TextEditingController();
+
+    Get.dialog(
+      AlertDialog(
+        title: const Text('Agregar Endpoint'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(
+                labelText: 'Nombre del endpoint',
+                hintText: 'ars, invoices, clients, etc.',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.label_outline),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: pathController,
+              decoration: const InputDecoration(
+                labelText: 'Ruta del endpoint',
+                hintText: '/ars/full, /invoices, etc.',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.link_outlined),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: Colors.blue[200]!),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, size: 14, color: Colors.blue[700]),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'El endpoint se guardará automáticamente al agregarlo',
+                      style: TextStyle(fontSize: 11, color: Colors.blue[700]),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final name = nameController.text.trim().toLowerCase();
+              final path = pathController.text.trim();
+
+              if (name.isNotEmpty && path.isNotEmpty) {
+                if (controller.erpEndpoints.containsKey(name)) {
+                  Get.snackbar(
+                    'Error',
+                    'Ya existe un endpoint con ese nombre',
+                    backgroundColor: Colors.red[100],
+                    colorText: Colors.red[700],
+                  );
+                  return;
+                }
+
+                controller.addEndpoint(name, path);
+                Get.back();
+
+                Get.snackbar(
+                  'Endpoint Agregado',
+                  'El endpoint "$name" se guardó automáticamente',
+                  backgroundColor: Colors.green[100],
+                  colorText: Colors.green[700],
+                );
+              } else {
+                Get.snackbar(
+                  'Error',
+                  'Por favor completa todos los campos',
+                  backgroundColor: Colors.orange[100],
+                  colorText: Colors.orange[700],
+                );
+              }
+            },
+            child: const Text('Agregar'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ERPEndpointsSection extends StatelessWidget {
   final ConfiguracionController controller;
   const _ERPEndpointsSection({required this.controller});
@@ -1452,7 +1775,6 @@ class _ERPEndpointsSection extends StatelessWidget {
       case EndpointType.payments:
         return Icons.payment;
       case EndpointType.custom:
-      default:
         return Icons.api;
     }
   }

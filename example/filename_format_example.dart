@@ -178,7 +178,7 @@ class FilenameFormatExample extends StatelessWidget {
         ),
         const SizedBox(height: 16),
 
-        ...examples.map((example) => _buildExampleCard(example)).toList(),
+        ...examples.map((example) => _buildExampleCard(example)),
       ],
     );
   }

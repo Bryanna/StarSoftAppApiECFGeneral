@@ -280,7 +280,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
     // Crear nombre de archivo con formato RNC+ENCF.pdf
     final rnc = inv.rncemisor ?? 'SIN_RNC';
     final encf = inv.encf ?? 'SIN_ENCF';
-    final fileName = '${rnc}${encf}.pdf';
+    final fileName = '$rnc$encf.pdf';
 
     try {
       PdfViewerService.showPdf(
@@ -315,7 +315,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
       // Crear nombre de archivo con formato RNC+ENCF (sin .pdf para impresión)
       final rnc = inv.rncemisor ?? 'SIN_RNC';
       final encf = inv.encf ?? 'SIN_ENCF';
-      final fileName = '${rnc}${encf}';
+      final fileName = '$rnc$encf';
 
       await PdfViewerService.printPdf(pdfBytes: pdfBytes!, title: fileName);
 
@@ -344,7 +344,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
     // Crear nombre de archivo con formato RNC+ENCF.pdf
     final rnc = inv.rncemisor ?? 'SIN_RNC';
     final encf = inv.encf ?? 'SIN_ENCF';
-    final fileName = '${rnc}${encf}.pdf';
+    final fileName = '$rnc$encf.pdf';
 
     PdfViewerService.showPdfFullscreen(pdfBytes: pdfBytes!, title: fileName,
     );
@@ -356,7 +356,7 @@ class _InvoicePreviewScreenState extends State<InvoicePreviewScreen> {
     // Crear nombre de archivo con formato RNC+ENCF.pdf
     final rnc = inv.rncemisor ?? 'SIN_RNC';
     final encf = inv.encf ?? 'SIN_ENCF';
-    final fileName = '${rnc}${encf}.pdf';
+    final fileName = '$rnc$encf.pdf';
 
     // Mostrar el visor con opciones de compartir
     PdfViewerService.showPdf(

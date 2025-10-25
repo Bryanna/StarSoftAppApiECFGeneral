@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -48,6 +49,18 @@ class ConfiguracionController extends GetxController {
   String baseEndpointUrl =
       'https://ecfrecepcion.starsoftdominicana.com/ecf/api';
 
+  // Configuración de URL base para endpoints ERP
+  String baseERPUrl = 'http://137.184.7.44:3390/api';
+
+  // Endpoints específicos configurados
+  Map<String, String> erpEndpoints = {
+    'ars': '/ars/full',
+    'ars_alt': '/ars/full', // Endpoint alternativo
+    'invoices': '/invoices/full',
+    'clients': '/clients',
+    'products': '/products',
+  };
+
   // Configuración de endpoint ERP (DEPRECATED - ahora se usan múltiples endpoints)
   String urlERPEndpoint = 'Sin configurar';
 
@@ -77,11 +90,16 @@ class ConfiguracionController extends GetxController {
 
   // Controller para endpoint
   final baseEndpointCtrl = TextEditingController();
+  final baseERPUrlCtrl = TextEditingController();
   final urlERPEndpointCtrl = TextEditingController();
+
+  // Controllers para endpoints específicos
+  final Map<String, TextEditingController> endpointControllers = {};
 
   @override
   void onInit() {
     super.onInit();
+    _initializeEndpointControllers();
     _loadCompanyData();
   }
 
@@ -124,6 +142,95 @@ class ConfiguracionController extends GetxController {
 
   /// Verifica si hay endpoints configurados
   bool get hasConfiguredEndpoints => _configuredEndpoints.isNotEmpty;
+
+  /// Inicializa los controllers para los endpoints
+  void _initializeEndpointControllers() {
+    // Limpiar controllers existentes
+    for (var controller in endpointControllers.values) {
+      controller.dispose();
+    }
+    endpointControllers.clear();
+
+    // Crear controllers para cada endpoint
+    for (var entry in erpEndpoints.entries) {
+      endpointControllers[entry.key] = TextEditingController(text: entry.value);
+    }
+  }
+
+  /// Obtiene la URL completa de un endpoint específico
+  String getFullEndpointUrl(String endpointKey) {
+    final endpoint = erpEndpoints[endpointKey];
+    if (endpoint == null) return baseERPUrl;
+
+    final base = baseERPUrl.endsWith('/')
+        ? baseERPUrl.substring(0, baseERPUrl.length - 1)
+        : baseERPUrl;
+    final path = endpoint.startsWith('/') ? endpoint : '/$endpoint';
+    return '$base$path';
+  }
+
+  /// Actualiza un endpoint específico
+  void updateEndpoint(String key, String path) {
+    erpEndpoints[key] = path;
+    update();
+    // Guardar automáticamente después de un pequeño delay
+    saveEndpointsWithDelay();
+  }
+
+  Timer? _saveTimer;
+
+  /// Guarda los endpoints con un delay para evitar múltiples guardados
+  void saveEndpointsWithDelay() {
+    _saveTimer?.cancel();
+    _saveTimer = Timer(const Duration(milliseconds: 1000), () {
+      _saveEndpointsToFirebase();
+    });
+  }
+
+  /// Guarda solo los endpoints en Firebase
+  Future<void> _saveEndpointsToFirebase() async {
+    if (companyRnc == null) return;
+
+    try {
+      Map<String, String> endpointsToSave = {};
+      for (var entry in endpointControllers.entries) {
+        endpointsToSave[entry.key] = entry.value.text.trim();
+      }
+
+      Map<String, dynamic> updateData = {
+        'baseERPUrl': baseERPUrlCtrl.text.trim(),
+        'erpEndpoints': endpointsToSave,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      await _db.set('companies/$companyRnc', updateData, merge: true);
+
+      // Actualizar variables locales
+      baseERPUrl = baseERPUrlCtrl.text.trim();
+      for (var entry in endpointControllers.entries) {
+        erpEndpoints[entry.key] = entry.value.text.trim();
+      }
+
+      debugPrint('[ConfigController] Endpoints guardados automáticamente');
+    } catch (e) {
+      debugPrint('[ConfigController] Error guardando endpoints: $e');
+    }
+  }
+
+  /// Agrega un nuevo endpoint
+  void addEndpoint(String key, String path) {
+    erpEndpoints[key] = path;
+    endpointControllers[key] = TextEditingController(text: path);
+    update();
+  }
+
+  /// Elimina un endpoint
+  void removeEndpoint(String key) {
+    erpEndpoints.remove(key);
+    endpointControllers[key]?.dispose();
+    endpointControllers.remove(key);
+    update();
+  }
 
   Future<void> _loadCompanyData() async {
     loading = true;
@@ -185,7 +292,22 @@ class ConfiguracionController extends GetxController {
             'https://ecfrecepcion.starsoftdominicana.com/ecf/api';
         baseEndpointCtrl.text = baseEndpointUrl;
 
-        // Configuración de endpoint ERP
+        // Configuración de URL base ERP
+        baseERPUrl =
+            companyData!['baseERPUrl'] ?? 'http://137.184.7.44:3390/api';
+        baseERPUrlCtrl.text = baseERPUrl;
+
+        // Configuración de endpoints ERP específicos
+        final savedEndpoints =
+            companyData!['erpEndpoints'] as Map<String, dynamic>?;
+        if (savedEndpoints != null) {
+          erpEndpoints = Map<String, String>.from(savedEndpoints);
+        }
+
+        // Inicializar controllers para endpoints
+        _initializeEndpointControllers();
+
+        // Configuración de endpoint ERP (legacy)
         urlERPEndpoint = companyData!['urlERPEndpoint'] ?? 'Sin configurar';
         urlERPEndpointCtrl.text = urlERPEndpoint;
 
@@ -620,6 +742,16 @@ class ConfiguracionController extends GetxController {
       // Configuración de endpoint
       updateData['baseEndpointUrl'] = baseEndpointCtrl.text.trim();
 
+      // Configuración de URL base ERP
+      updateData['baseERPUrl'] = baseERPUrlCtrl.text.trim();
+
+      // Configuración de endpoints ERP específicos
+      Map<String, String> endpointsToSave = {};
+      for (var entry in endpointControllers.entries) {
+        endpointsToSave[entry.key] = entry.value.text.trim();
+      }
+      updateData['erpEndpoints'] = endpointsToSave;
+
       // Configuración de endpoint ERP (DEPRECATED - no sobrescribir si hay endpoints configurados)
       if (_configuredEndpoints.isEmpty) {
         updateData['urlERPEndpoint'] = urlERPEndpointCtrl.text.trim().isEmpty
@@ -642,6 +774,13 @@ class ConfiguracionController extends GetxController {
 
       // Actualizar variables locales
       invoiceStoragePath = storagePathCtrl.text.trim();
+      baseERPUrl = baseERPUrlCtrl.text.trim();
+
+      // Actualizar endpoints desde controllers
+      for (var entry in endpointControllers.entries) {
+        erpEndpoints[entry.key] = entry.value.text.trim();
+      }
+
       urlERPEndpoint = urlERPEndpointCtrl.text.trim().isEmpty
           ? 'Sin configurar'
           : urlERPEndpointCtrl.text.trim();
@@ -812,13 +951,61 @@ class ConfiguracionController extends GetxController {
 
   @override
   void onClose() {
+    _saveTimer?.cancel();
+
     storagePathCtrl.dispose();
     googleDriveFolderCtrl.dispose();
     googleDriveCredentialsCtrl.dispose();
     dropboxTokenCtrl.dispose();
     oneDriveTokenCtrl.dispose();
     baseEndpointCtrl.dispose();
+    baseERPUrlCtrl.dispose();
     urlERPEndpointCtrl.dispose();
+
+    // Dispose endpoint controllers
+    for (var controller in endpointControllers.values) {
+      controller.dispose();
+    }
+    endpointControllers.clear();
+
+    /// Configura automáticamente el endpoint de ARS
+    void setupARSEndpoint() {
+      // Configurar URL base si no está configurada
+      if (baseERPUrl.isEmpty || baseERPUrl == 'Sin configurar') {
+        baseERPUrl = 'http://137.184.7.44:3390/api';
+        baseERPUrlCtrl.text = baseERPUrl;
+      }
+
+      // Agregar endpoint de ARS si no existe
+      if (!erpEndpoints.containsKey('ars')) {
+        addEndpoint('ars', '/ars/full');
+      }
+
+      // Agregar endpoint alternativo de ARS si no existe
+      if (!erpEndpoints.containsKey('ars_alt')) {
+        addEndpoint('ars_alt', '/ars/full');
+      }
+
+      update();
+
+      debugPrint('[ConfigController] ARS endpoints configured:');
+      debugPrint('  - ars: ${getFullEndpointUrl('ars')}');
+      debugPrint('  - ars_alt: ${getFullEndpointUrl('ars_alt')}');
+    }
+
+    /// Obtiene la URL del endpoint de ARS configurado
+    String getARSEndpointUrl() {
+      if (erpEndpoints.containsKey('ars')) {
+        return getFullEndpointUrl('ars');
+      }
+
+      // Fallback a URL base + /ars/full
+      final base = baseERPUrl.endsWith('/')
+          ? baseERPUrl.substring(0, baseERPUrl.length - 1)
+          : baseERPUrl;
+      return '$base/ars/full';
+    }
+
     super.onClose();
   }
 }

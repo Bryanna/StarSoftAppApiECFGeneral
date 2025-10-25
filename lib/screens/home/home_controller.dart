@@ -27,8 +27,11 @@ class HomeController extends GetxController {
 
   // Estado
   InvoiceCategory currentCategory = InvoiceCategory.pacientes;
+  String? currentTipoComprobante; // Nuevo: tipo de comprobante específico
+  String? currentTabType; // Nuevo: tipo_tab_envio_factura seleccionado
   bool loading = false;
   List<ERPInvoice> invoices = [];
+  List<ERPInvoice> allInvoices = []; // Nuevo: todas las facturas sin filtrar
   String query = '';
 
   // Estados de error específicos
@@ -105,10 +108,10 @@ class HomeController extends GetxController {
     QueueProcessorService.instance.startProcessing();
 
     _prefetchCounts();
-    loadCategory(InvoiceCategory.pacientes);
+    // Cargar "todos" primero para tener todos los datos disponibles
+    loadCategory(InvoiceCategory.todos);
   }
-
-  Future<void> _prefetchCounts() async {
+ Future<void> _prefetchCounts() async {
     // Realiza una sola llamada y rellena el cache para todas las pestañas.
     debugPrint('[HomeController] prefetchCounts start');
 
@@ -126,52 +129,91 @@ class HomeController extends GetxController {
       }
 
       debugPrint('[HomeController] prefetchCounts got ${list.length} items');
-      // Derivamos alias corto del tipo de comprobante a partir del documento/NCF.
-      String aliasFor(ERPInvoice inv) {
-        // Preferimos ENCF para derivar el tipo; si no, intentamos con código.
-        final base =
-            inv.encf ?? inv.tipoecf ?? inv.tipoComprobante ?? inv.numeroFactura;
-        final alias = aliasDesdeDocumento(base);
-        if (alias != null) return alias;
-        final code = inv.tipoComprobante ?? inv.tipoecf ?? '';
-        return aliasDesdeDocumento(code) ?? code;
-      }
 
-      // Construimos listas por categoría en cliente.
-      DisplayStatus statusOf(ERPInvoice i) {
-        if (i.fAnulada == true) return DisplayStatus.rechazada;
-        if (i.fPagada == true) return DisplayStatus.aprobada;
+      // Construimos listas por categoría usando los primeros 3 caracteres del ENCF
+      DisplayStatus statusOf(ERPInvoice invoice) {
+        // Priorizar el estado del endpoint si está disponible
+        final code = invoice.estadoCode;
+        if (code != null) {
+          switch (code) {
+            case 1:
+              return DisplayStatus.pendiente;
+            case 2:
+              return DisplayStatus.rechazada;
+            case 3:
+              return DisplayStatus.enviado;
+          }
+        }
+        // Fallback a la lógica anterior
+        if (invoice.fAnulada == true) return DisplayStatus.rechazada;
+        if (invoice.fPagada == true) return DisplayStatus.aprobada;
         final enviado =
-            (i.linkOriginal != null && i.linkOriginal!.isNotEmpty) ||
-            i.fechaHoraFirma != null;
+            (invoice.linkOriginal != null && invoice.linkOriginal!.isNotEmpty) ||
+            invoice.fechaHoraFirma != null;
         if (enviado) return DisplayStatus.enviado;
         return DisplayStatus.pendiente;
       }
 
-      final pacientes = list.where((i) {
-        final a = aliasFor(i);
-        return a == 'Consumo' || a == 'Crédito Fiscal';
+      String? getTipoComprobanteFromEncf(ERPInvoice invoice) {
+        if (invoice.encf != null && invoice.encf!.length >= 3) {
+          return invoice.encf!.substring(0, 3).toUpperCase();
+        }
+        if (invoice.tipoecf != null && invoice.tipoecf!.isNotEmpty) {
+          if (RegExp(r'^\d+$').hasMatch(invoice.tipoecf!)) {
+            return 'B${invoice.tipoecf!.padLeft(2, '0')}';
+          }
+          return invoice.tipoecf!.toUpperCase();
+        }
+        return null;
+      }
+
+      // Filtrar por tipo de comprobante usando los primeros 3 caracteres del ENCF
+      final pacientes = list.where((invoice) {
+        final tipo = getTipoComprobanteFromEncf(invoice);
+        return tipo != null &&
+            [
+              'E31',
+              'E32',
+              'B01',
+              'C01',
+              'P01',
+              'B02',
+              'C02',
+              'P02',
+            ].contains(tipo);
       }).toList();
-      final ars = list.where((i) => i.fArsNombre != null).toList();
-      final notasCredito = list
-          .where((i) => aliasFor(i) == 'Nota Crédito')
-          .toList();
-      final notasDebito = list
-          .where((i) => aliasFor(i) == 'Nota Débito')
-          .toList();
-      final gastos = list
-          .where((i) => aliasFor(i) == 'Gastos Menores')
-          .toList();
+
+      final ars = list.where((invoice) {
+        final tipo = getTipoComprobanteFromEncf(invoice);
+        return tipo != null && ['E41', 'B11', 'C11', 'P11'].contains(tipo);
+      }).toList();
+
+      final notasCredito = list.where((invoice) {
+        final tipo = getTipoComprobanteFromEncf(invoice);
+        return tipo != null && ['E34', 'B04', 'C04', 'P04'].contains(tipo);
+      }).toList();
+
+      final notasDebito = list.where((invoice) {
+        final tipo = getTipoComprobanteFromEncf(invoice);
+        return tipo != null && ['E33', 'B03', 'C03', 'P03'].contains(tipo);
+      }).toList();
+
+      final gastos = list.where((invoice) {
+        final tipo = getTipoComprobanteFromEncf(invoice);
+        return tipo != null && ['E43', 'B13', 'C13', 'P13'].contains(tipo);
+      }).toList();
+
       // Enviados: estado 'Enviado' explícito (no pendiente, no aprobada, no rechazada)
       final enviados = list
-          .where((i) => statusOf(i) == DisplayStatus.enviado)
+          .where((invoice) => statusOf(invoice) == DisplayStatus.enviado)
           .toList();
       // Rechazados: estado 'Rechazada'
       final rechazados = list
-          .where((i) => statusOf(i) == DisplayStatus.rechazada)
+          .where((invoice) => statusOf(invoice) == DisplayStatus.rechazada)
           .toList();
 
       // Todos: el dataset completo sin filtrar
+      allInvoices = list; // Guardar todas las facturas
       _cache[InvoiceCategory.todos] = list;
       _cache[InvoiceCategory.pacientes] = pacientes;
       _cache[InvoiceCategory.ars] = ars;
@@ -193,6 +235,8 @@ class HomeController extends GetxController {
   Future<void> loadCategory(InvoiceCategory category) async {
     debugPrint('[HomeController] loadCategory=$category');
     currentCategory = category;
+    currentTipoComprobante = null; // Limpiar filtro específico
+    currentTabType = null; // Limpiar filtro por tipo_tab_envio_factura
     loading = true;
     _clearErrors();
     update();
@@ -201,6 +245,10 @@ class HomeController extends GetxController {
       // usa cache si existe
       if (_cache.containsKey(category)) {
         invoices = _cache[category]!;
+        // Si es "todos", también actualizar allInvoices
+        if (category == InvoiceCategory.todos) {
+          allInvoices = invoices;
+        }
         debugPrint('[HomeController] using cache: ${invoices.length} items');
         loading = false;
         update();
@@ -210,6 +258,10 @@ class HomeController extends GetxController {
       final list = await _service.fetchInvoices(category);
       _cache[category] = list;
       invoices = list;
+      // Si es "todos", también actualizar allInvoices
+      if (category == InvoiceCategory.todos) {
+        allInvoices = list;
+      }
       debugPrint('[HomeController] loaded ${list.length} items from service');
     } catch (e) {
       _handleError(e);
@@ -218,6 +270,87 @@ class HomeController extends GetxController {
       loading = false;
       update();
     }
+  }
+
+  // Nuevo método para cargar por tipo de comprobante específico
+  void loadByTipoComprobante(String tipoComprobante) {
+    debugPrint('[HomeController] loadByTipoComprobante=$tipoComprobante');
+    currentTipoComprobante = tipoComprobante;
+    currentTabType = null;
+    // Determinar la categoría en base al tipo de comprobante (primeros 3 caracteres)
+    final tc = tipoComprobante.toUpperCase();
+    const pacientesTC = {'E31','E32','B01','C01','P01','B02','C02','P02'};
+    const arsTC = {'E41','B11','C11','P11'};
+    const notasCreditoTC = {'E34','B04','C04','P04'};
+    const notasDebitoTC = {'E33','B03','C03','P03'};
+    const gastosTC = {'E43','B13','C13','P13'};
+    if (pacientesTC.contains(tc)) {
+      currentCategory = InvoiceCategory.pacientes;
+    } else if (arsTC.contains(tc)) {
+      currentCategory = InvoiceCategory.ars;
+    } else if (notasCreditoTC.contains(tc)) {
+      currentCategory = InvoiceCategory.notasCredito;
+    } else if (notasDebitoTC.contains(tc)) {
+      currentCategory = InvoiceCategory.notasDebito;
+    } else if (gastosTC.contains(tc)) {
+      currentCategory = InvoiceCategory.gastos;
+    } else {
+      currentCategory = InvoiceCategory.todos;
+    }
+
+    // Asegurar que tenemos datos cargados
+    if (allInvoices.isEmpty) {
+      debugPrint('[HomeController] allInvoices is empty, using cache[todos]');
+      allInvoices = _cache[InvoiceCategory.todos] ?? [];
+    }
+
+    // Si aún no hay datos, usar las facturas actuales como fallback
+    final sourceInvoices = allInvoices.isNotEmpty ? allInvoices : invoices;
+
+    // Filtrar todas las facturas por el tipo específico
+    invoices = sourceInvoices.where((invoice) {
+      final tipo = _getTipoComprobanteFromEncf(invoice);
+      return tipo == tipoComprobante;
+    }).toList();
+
+    debugPrint(
+      '[HomeController] filtered to ${invoices.length} items for type $tipoComprobante from ${sourceInvoices.length} total',
+    );
+    update();
+  }
+
+  // Nuevo: cargar por tipo_tab_envio_factura (FacturaArs / FacturaPaciente)
+  void loadByTabType(String tabType) {
+    debugPrint('[HomeController] loadByTabType=$tabType');
+    currentTabType = tabType;
+    currentTipoComprobante = null;
+    currentCategory = _mapTabTypeToCategory(tabType);
+
+    if (allInvoices.isEmpty) {
+      debugPrint('[HomeController] allInvoices is empty, using cache[todos]');
+      allInvoices = _cache[InvoiceCategory.todos] ?? [];
+    }
+
+    final sourceInvoices = allInvoices.isNotEmpty ? allInvoices : invoices;
+    final lowerTab = tabType.toLowerCase();
+    invoices = sourceInvoices.where((invoice) {
+      final t = (invoice.tipoTabEnvioFactura ?? '').toLowerCase();
+      if (lowerTab.contains('ars')) return t.contains('ars');
+      if (lowerTab.contains('paciente')) return t.contains('paciente');
+      return t == lowerTab;
+    }).toList();
+
+    debugPrint(
+      '[HomeController] filtered to ${invoices.length} items for tabType $tabType from ${sourceInvoices.length} total',
+    );
+    update();
+  }
+
+  InvoiceCategory _mapTabTypeToCategory(String tabType) {
+    final lower = tabType.toLowerCase();
+    if (lower.contains('ars')) return InvoiceCategory.ars;
+    if (lower.contains('paciente')) return InvoiceCategory.pacientes;
+    return InvoiceCategory.todos;
   }
 
   Future<void> refreshCurrentCategory() async {
@@ -353,303 +486,12 @@ class HomeController extends GetxController {
       debugPrint('');
 
       // Usar la nueva vista previa mejorada
-      showEnhancedInvoicePreview(
-        context: Get.context!,
-        invoice: invoice,
-      );
+      showEnhancedInvoicePreview(context: Get.context!, invoice: invoice);
     } catch (e) {
       Get.snackbar(
         'Error',
         'No se pudo abrir la vista previa: $e',
         snackPosition: SnackPosition.BOTTOM,
-      );
-    }
-  }
-
-  Future<void> printInvoice(ERPInvoice invoice) async {
-    try {
-      debugPrint('');
-      debugPrint('🖨️🖨️🖨️ PRINT INVOICE CALLED - HOME CONTROLLER 🖨️🖨️🖨️');
-      debugPrint(
-        '🖨️ About to call EnhancedInvoicePdfService.buildPdf for printing',
-      );
-      debugPrint('');
-
-      final invoiceMap = _convertERPInvoiceToMap(invoice);
-
-      final bytes = await EnhancedInvoicePdfService.buildPdf(
-        PdfPageFormat.a4,
-        invoiceMap,
-      );
-      final name =
-          'Factura ${invoice.numeroFactura.isNotEmpty ? invoice.numeroFactura : 'CENSAVID'}';
-
-      // Intentar imprimir directamente
-      await PdfViewerService.printPdf(pdfBytes: bytes, title: name);
-
-      Get.snackbar(
-        'Impresión',
-        'Factura ${invoice.numeroFactura.isNotEmpty ? invoice.numeroFactura : '-'} enviada a impresora',
-        snackPosition: SnackPosition.BOTTOM,
-      );
-    } catch (e) {
-      Get.snackbar(
-        'Error',
-        'No se pudo imprimir: $e',
-        snackPosition: SnackPosition.BOTTOM,
-      );
-    }
-  }
-
-  Future<void> downloadInvoice(ERPInvoice invoice) async {
-    try {
-      debugPrint('');
-      debugPrint('🔥🔥🔥 DOWNLOAD INVOICE CALLED - HOME CONTROLLER 🔥🔥🔥');
-      debugPrint('🔥 About to call EnhancedInvoicePdfService.buildPdf');
-      debugPrint('');
-
-      // Debug: verificar qué datos estamos enviando al PDF
-      if (kDebugMode) {
-        debugPrint('');
-        debugPrint('🔍🔍🔍 DOWNLOAD INVOICE DEBUG 🔍🔍🔍');
-        debugPrint('Invoice eCF: ${invoice.encf}');
-        debugPrint(
-          'Invoice detalleFactura: ${invoice.detalleFactura?.substring(0, invoice.detalleFactura!.length > 100 ? 100 : invoice.detalleFactura!.length) ?? 'NULL'}...',
-        );
-        debugPrint('Invoice has ${invoice.detalles.length} parsed details');
-
-        // VERIFICACIÓN CRÍTICA
-        if (invoice.detalleFactura == null || invoice.detalleFactura!.isEmpty) {
-          debugPrint('');
-          debugPrint('❌❌❌ PROBLEMA ENCONTRADO ❌❌❌');
-          debugPrint('❌ La factura NO tiene campo detalleFactura');
-          debugPrint('❌ Esto significa que estás usando DATOS FAKE');
-          debugPrint('❌ Ve a Configuración y DESACTIVA "Usar datos fake"');
-          debugPrint('❌❌❌ PROBLEMA ENCONTRADO ❌❌❌');
-          debugPrint('');
-        } else {
-          debugPrint(
-            '✅ La factura SÍ tiene detalleFactura - debería funcionar',
-          );
-        }
-      }
-
-      // Usar EnhancedInvoicePdfService que puede manejar Map directamente
-      final invoiceMap = _convertERPInvoiceToMap(invoice);
-
-      // Debug: verificar el map que se envía al PDF
-      if (kDebugMode) {
-        debugPrint('');
-        debugPrint('🔍 INVOICE MAP DEBUG:');
-        debugPrint('🔍 INVOICE FIELDS DEBUG:');
-        debugPrint('🔍 encf (eCF): ${invoice.encf}');
-        debugPrint(
-          '🔍 numerofacturainterna (No. Factura): ${invoice.numerofacturainterna}',
-        );
-        debugPrint(
-          '🔍 noAutorizacion (Autorización): ${invoice.noAutorizacion}',
-        );
-        debugPrint('🔍 nss (NSS): ${invoice.nss}');
-        debugPrint('🔍 medico (Médico): ${invoice.medico}');
-        debugPrint('🔍 cedulaMedico (RNC/CED): ${invoice.cedulaMedico}');
-        debugPrint('🔍 tipoFacturaTitulo: "${invoice.tipoFacturaTitulo}"');
-        debugPrint('🔍 aseguradora: "${invoice.aseguradora}"');
-
-        // Debug del map que se envía al PDF
-        final tipoEnMap = invoiceMap['tipo_factura_titulo'] as String?;
-        debugPrint('🔍 tipo_factura_titulo in map: "$tipoEnMap"');
-        debugPrint(
-          '🔍 Original invoice.detalleFactura: ${invoice.detalleFactura?.substring(0, invoice.detalleFactura!.length > 100 ? 100 : invoice.detalleFactura!.length) ?? 'NULL'}...',
-        );
-
-        final detalleInMap = invoiceMap['DetalleFactura'] as String?;
-        debugPrint(
-          '🔍 DetalleFactura in map: ${detalleInMap?.substring(0, detalleInMap.length > 100 ? 100 : detalleInMap.length) ?? 'NULL'}...',
-        );
-
-        // Verificar si el problema está en la conversión
-        if ((invoice.detalleFactura != null &&
-                invoice.detalleFactura!.isNotEmpty) &&
-            (detalleInMap == null || detalleInMap.isEmpty)) {
-          debugPrint(
-            '❌ PROBLEMA: La factura original tiene detalleFactura pero el map no',
-          );
-        } else if ((invoice.detalleFactura == null ||
-            invoice.detalleFactura!.isEmpty)) {
-          debugPrint('❌ PROBLEMA: La factura original NO tiene detalleFactura');
-          debugPrint('❌ Esto significa que el ERP no está enviando este campo');
-        }
-
-        debugPrint('=== END DOWNLOAD DEBUG ===');
-        debugPrint('');
-      }
-
-      final bytes = await EnhancedInvoicePdfService.buildPdf(
-        PdfPageFormat.a4,
-        invoiceMap,
-      );
-      final name =
-          'Factura_${invoice.numeroFactura.isNotEmpty ? invoice.numeroFactura : 'CENSAVID'}';
-
-      // Mostrar en el visor personalizado
-      PdfViewerService.showPdf(pdfBytes: bytes, title: name, showActions: true);
-
-      Get.snackbar(
-        'PDF Generado',
-        'Factura ${invoice.numeroFactura.isNotEmpty ? invoice.numeroFactura : '-'} lista para ver',
-        snackPosition: SnackPosition.BOTTOM,
-      );
-    } catch (e) {
-      Get.snackbar(
-        'Error',
-        'No se pudo descargar: $e',
-        snackPosition: SnackPosition.BOTTOM,
-      );
-    }
-  }
-
-  // Enviar facturas seleccionadas en lote (NUEVA VERSIÓN CON COLA)
-  Future<void> sendSelectedInvoices() async {
-    // Validaciones
-    if (selectedInvoiceIds.isEmpty) {
-      Get.snackbar(
-        'Sin Selección',
-        'Por favor selecciona al menos una factura para enviar',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.orange,
-        colorText: Colors.white,
-        icon: const Icon(Icons.warning, color: Colors.white),
-      );
-      return;
-    }
-
-    // Obtener las facturas seleccionadas
-    final selectedInvoices = invoices
-        .where(
-          (inv) => inv.encf != null && selectedInvoiceIds.contains(inv.encf!),
-        )
-        .toList();
-
-    if (selectedInvoices.isEmpty) {
-      Get.snackbar(
-        'Error',
-        'No se encontraron facturas válidas para enviar',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-      return;
-    }
-
-    // Validar que no haya facturas rechazadas
-    final rejectedInvoices = selectedInvoices
-        .where((inv) => inv.fAnulada == true)
-        .toList();
-    if (rejectedInvoices.isNotEmpty) {
-      Get.snackbar(
-        'Facturas Rechazadas',
-        'No puedes enviar facturas rechazadas. Por favor deselecciónalas.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-        duration: const Duration(seconds: 4),
-      );
-      return;
-    }
-
-    // Confirmar envío
-    final confirmed = await Get.dialog<bool>(
-      AlertDialog(
-        title: const Text('Confirmar Envío en Lote'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '¿Estás seguro de enviar ${selectedInvoices.length} factura(s) seleccionada(s)?',
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.blue.shade200),
-              ),
-              child: const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.queue, color: Colors.blue, size: 20),
-                      SizedBox(width: 8),
-                      Text(
-                        'Sistema de Cola',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    '• Las facturas se enviarán una por una automáticamente\n'
-                    '• Podrás ver el progreso en tiempo real\n'
-                    '• Se reintentarán automáticamente en caso de error',
-                    style: TextStyle(fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(result: false),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () => Get.back(result: true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Agregar a Cola'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true) return;
-
-    try {
-      // Agregar facturas a la cola de Firebase
-      // Usar método directo sin servicio complejo por ahora
-      await _addInvoicesToFirebaseQueue(selectedInvoices);
-
-      // Limpiar selección
-      clearSelection();
-
-      // Mostrar confirmación y navegar a la cola
-      Get.snackbar(
-        'Agregado a Cola',
-        '${selectedInvoices.length} factura(s) agregada(s) a la cola de envío',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-        icon: const Icon(Icons.queue, color: Colors.white),
-        duration: const Duration(seconds: 3),
-        mainButton: TextButton(
-          onPressed: () => Get.toNamed('/queue'),
-          child: const Text('Ver Cola', style: TextStyle(color: Colors.white)),
-        ),
-      );
-    } catch (e) {
-      debugPrint('[HomeController] Error agregando a cola: $e');
-      Get.snackbar(
-        'Error',
-        'No se pudieron agregar las facturas a la cola: $e',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
       );
     }
   }
@@ -679,613 +521,6 @@ class HomeController extends GetxController {
       hasConnectionError = true;
       errorMessage = 'Error inesperado: $error';
     }
-  }
-
-  // Método para crear el scenario JSON desde una factura (USANDO DATOS REALES DEL ERP)
-  Future<Map<String, dynamic>> _createScenarioFromInvoice(
-    ERPInvoice invoice,
-  ) async {
-    // Helper function to check if value is valid (not null, empty, or "#e")
-    bool isValidValue(String? value) {
-      return value != null && value.isNotEmpty && value != '#e';
-    }
-
-    // Parsear detalles para los items
-    final detalles = invoice.detalles;
-
-    // Crear el scenario SOLO con campos del XSD que tengan datos válidos
-    final scenario = <String, dynamic>{};
-
-    // CasoPrueba se generará después de obtener RNCEmisor y eNCF
-
-    // === CAMPOS DEL XSD SOLAMENTE ===
-
-    // Version (required)
-    scenario['Version'] = invoice.version ?? '1.0';
-
-    // TipoeCF (required) - TEMPORAL: usando 32 para coincidir con E32
-    scenario['TipoeCF'] = '32'; // TEMPORAL: coincide con E320000000213
-    debugPrint('[HomeController] 🧪 USANDO TipoeCF DE PRUEBA: 32');
-
-    // eNCF (required) - TEMPORAL: usando número de prueba
-
-    final encf = 'E320000000286'; // NÚMERO DE PRUEBA TEMPORAL
-    scenario['ENCF'] = encf;
-    debugPrint('[HomeController] 🧪 USANDO eNCF DE PRUEBA: $encf');
-
-    // FechaVencimientoSecuencia (required for e-CF 31)
-    final fechaVencimiento = invoice.fechavencimientosecuencia;
-    if (isValidValue(fechaVencimiento)) {
-      scenario['FechaVencimientoSecuencia'] = fechaVencimiento;
-    }
-
-    // TipoIngresos (required)
-    scenario['TipoIngresos'] = invoice.tipoingresos ?? '01';
-
-    // TipoPago (required)
-    scenario['TipoPago'] = invoice.tipopago ?? '1';
-
-    // FormaPago[1] and MontoPago[1] (if valid)
-    final formaPago1 = invoice.formapago1;
-    if (isValidValue(formaPago1)) scenario['FormaPago[1]'] = formaPago1;
-
-    final montoPago1 = invoice.montopago1 ?? invoice.montototal;
-    if (isValidValue(montoPago1)) scenario['MontoPago[1]'] = montoPago1;
-
-    // === Obtener datos del emisor desde Firebase ===
-    Map<String, dynamic> companyData = {};
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        final userDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .get();
-
-        if (userDoc.exists) {
-          final userData = userDoc.data()!;
-          final companyRnc = userData['companyRnc'] as String?;
-
-          if (companyRnc != null && companyRnc.isNotEmpty) {
-            final companyDoc = await FirebaseFirestore.instance
-                .collection('companies')
-                .doc(companyRnc)
-                .get();
-
-            if (companyDoc.exists) {
-              companyData = companyDoc.data()!;
-              debugPrint(
-                '[HomeController] Datos de empresa obtenidos desde Firebase',
-              );
-            }
-          }
-        }
-      }
-    } catch (e) {
-      debugPrint('[HomeController] Error obteniendo datos de empresa: $e');
-    }
-
-    // === Emisor (usando datos de Firebase cuando estén disponibles) ===
-
-    // RNCEmisor (required) - prioridad a Firebase
-    final rncEmisorFirebase = companyData['rnc'] as String?;
-    final rncEmisor = rncEmisorFirebase ?? invoice.rncemisor;
-    if (isValidValue(rncEmisor)) scenario['RNCEmisor'] = rncEmisor;
-
-    // RazonSocialEmisor (required) - prioridad a Firebase
-    final razonSocialFirebase = companyData['razonSocial'] as String?;
-    final razonSocialEmisor = razonSocialFirebase ?? invoice.razonsocialemisor;
-    if (isValidValue(razonSocialEmisor)) {
-      scenario['RazonSocialEmisor'] = razonSocialEmisor;
-    }
-
-    // DireccionEmisor (required) - prioridad a Firebase
-    final direccionFirebase = companyData['direccion'] as String?;
-    final direccionEmisor = direccionFirebase ?? invoice.direccionemisor;
-    if (isValidValue(direccionEmisor)) {
-      scenario['DireccionEmisor'] = direccionEmisor;
-    }
-
-    // FechaEmision (required) - siempre del invoice
-    final fechaEmision = invoice.fechaemision;
-    if (isValidValue(fechaEmision)) {
-      scenario['FechaEmision'] = fechaEmision!.replaceAll('/', '-');
-    }
-
-    // === Emisor (optional fields con prioridad a Firebase) ===
-
-    // NombreComercial - usar la misma razonSocial de Firebase
-    final nombreComercial = razonSocialFirebase ?? invoice.nombrecomercial;
-    if (isValidValue(nombreComercial)) {
-      scenario['NombreComercial'] = nombreComercial;
-    }
-
-    // TelefonoEmisor[1] - prioridad a Firebase
-    final telefonoFirebase = companyData['telefono'] as String?;
-    final telefonoEmisor1 = telefonoFirebase ?? invoice.telefonoemisor1;
-    if (isValidValue(telefonoEmisor1)) {
-      scenario['TelefonoEmisor[1]'] = telefonoEmisor1;
-    }
-
-    // CorreoEmisor - prioridad a Firebase
-    final correoFirebase = companyData['correo'] as String?;
-    final correoEmisor = correoFirebase ?? invoice.correoemisor;
-    if (isValidValue(correoEmisor)) scenario['CorreoEmisor'] = correoEmisor;
-
-    // WebSite - prioridad a Firebase
-    final webSiteFirebase = companyData['website'] as String?;
-    final webSite = webSiteFirebase ?? invoice.website;
-    if (isValidValue(webSite)) scenario['WebSite'] = webSite;
-
-    // Campos que siguen del invoice (no están en Firebase)
-    final municipio = invoice.municipio;
-    if (isValidValue(municipio)) scenario['Municipio'] = municipio;
-
-    final provincia = invoice.provincia;
-    if (isValidValue(provincia)) scenario['Provincia'] = provincia;
-
-    // === Generar CasoPrueba (RNCEmisor + eNCF) ===
-    final rncParaCaso = rncEmisor ?? '';
-    final encfParaCaso = encf ?? '';
-    if (rncParaCaso.isNotEmpty && encfParaCaso.isNotEmpty) {
-      scenario['CasoPrueba'] = '$rncParaCaso$encfParaCaso';
-      debugPrint(
-        '[HomeController] CasoPrueba generado: $rncParaCaso$encfParaCaso',
-      );
-    }
-
-    final actividadEconomica = invoice.actividadeconomica;
-    if (isValidValue(actividadEconomica)) {
-      scenario['ActividadEconomica'] = actividadEconomica;
-    }
-
-    final codigoVendedor = invoice.codigovendedor;
-    if (isValidValue(codigoVendedor)) {
-      scenario['CodigoVendedor'] = codigoVendedor;
-    }
-
-    final numeroFacturaInterna = invoice.numerofacturainterna;
-    if (isValidValue(numeroFacturaInterna)) {
-      scenario['NumeroFacturaInterna'] = numeroFacturaInterna;
-    }
-
-    // === Comprador ===
-    final rncComprador = invoice.rnccomprador;
-    if (isValidValue(rncComprador)) scenario['RNCComprador'] = rncComprador;
-
-    final razonSocialComprador = invoice.razonsocialcomprador;
-    if (isValidValue(razonSocialComprador)) {
-      scenario['RazonSocialComprador'] = razonSocialComprador;
-    }
-
-    final direccionComprador = invoice.direccioncomprador;
-    if (isValidValue(direccionComprador)) {
-      scenario['DireccionComprador'] = direccionComprador;
-    }
-
-    final municipioComprador = invoice.municipiocomprador;
-    if (isValidValue(municipioComprador)) {
-      scenario['MunicipioComprador'] = municipioComprador;
-    }
-
-    final provinciaComprador = invoice.provinciacomprador;
-    if (isValidValue(provinciaComprador)) {
-      scenario['ProvinciaComprador'] = provinciaComprador;
-    }
-
-    // === Totales (required) ===
-    scenario['MontoTotal'] = invoice.montototal ?? '0.00';
-
-    // === Totales (optional) ===
-    final montoGravadoTotal = invoice.montogravadototal;
-    if (isValidValue(montoGravadoTotal) && montoGravadoTotal != '0.00') {
-      scenario['MontoGravadoTotal'] = montoGravadoTotal;
-    }
-
-    final montoExento = invoice.montoexento;
-    if (isValidValue(montoExento) && montoExento != '0.00') {
-      scenario['MontoExento'] = montoExento;
-    }
-
-    final totalItbis = invoice.totalitbis;
-    if (isValidValue(totalItbis) && totalItbis != '0.00') {
-      scenario['TotalITBIS'] = totalItbis;
-    }
-
-    // === Items (SOLO campos del XSD) ===
-    for (int i = 0; i < detalles.length; i++) {
-      final detalle = detalles[i];
-      final index = i + 1;
-
-      // NumeroLinea (required)
-      scenario['NumeroLinea[$index]'] = detalle.referencia ?? index.toString();
-
-      // IndicadorFacturacion (required)
-      scenario['IndicadorFacturacion[$index]'] = '4'; // Exento
-
-      // NombreItem (required)
-      final nombreItem = detalle.descripcion;
-      if (isValidValue(nombreItem)) scenario['NombreItem[$index]'] = nombreItem;
-
-      // IndicadorBienoServicio (required)
-      scenario['IndicadorBienoServicio[$index]'] = '2'; // Servicio
-
-      // CantidadItem (required)
-      scenario['CantidadItem[$index]'] = detalle.cantidad?.toString() ?? '1.00';
-
-      // UnidadMedida (optional)
-      scenario['UnidadMedida[$index]'] =
-          '47'; // Lata (código estándar para servicios médicos)
-
-      // PrecioUnitarioItem (required)
-      scenario['PrecioUnitarioItem[$index]'] =
-          detalle.precio?.toString() ?? '0.00';
-
-      // MontoItem (required)
-      scenario['MontoItem[$index]'] = detalle.total?.toString() ?? '0.00';
-
-      // NO incluir CoberturalItem - NO EXISTE EN EL XSD
-    }
-
-    return {'scenario': scenario};
-  }
-
-  // Método para extraer el tipo de eCF
-  String _extractTipoeCF(ERPInvoice invoice) {
-    final encf = invoice.numeroFactura;
-    if (encf.startsWith('E31')) return '31';
-    if (encf.startsWith('E32')) return '32';
-    if (encf.startsWith('E33')) return '33';
-    if (encf.startsWith('E34')) return '34';
-    if (encf.startsWith('E41')) return '41';
-    if (encf.startsWith('E43')) return '43';
-    if (encf.startsWith('E44')) return '44';
-    if (encf.startsWith('E45')) return '45';
-    if (encf.startsWith('E46')) return '46';
-    if (encf.startsWith('E47')) return '47';
-    return '33'; // Por defecto
-  }
-
-  // Método para formatear fecha para el scenario
-  String _formatDateForScenario(DateTime date) {
-    return "${date.day.toString().padLeft(2, '0')}-${date.month.toString().padLeft(2, '0')}-${date.year}";
-  }
-
-  // MÉTODO DESHABILITADO - Ahora todo va a la cola
-  /*
-  void _showSendingDialog(
-    ERPInvoice invoice,
-    Map<String, dynamic> requestBody,
-  ) {
-    Get.dialog(
-      PopScope(
-        canPop: false,
-        child: Dialog(
-          child: Container(
-            width: Get.width * 0.8,
-            height: Get.height * 0.8,
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Enviando Factura ${invoice.numeroFactura}',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => Get.back(),
-                      icon: const Icon(Icons.close),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey[300]!),
-                    ),
-                    child: FutureBuilder<Map<String, dynamic>>(
-                      future: _sendToEndpoint(requestBody),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return const Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              CircularProgressIndicator(),
-                              SizedBox(height: 16),
-                              Text('Enviando a la DGII...'),
-                              SizedBox(height: 8),
-                              Text(
-                                'Procesando factura electrónica',
-                                style: TextStyle(color: Colors.grey),
-                              ),
-                            ],
-                          );
-                        } else if (snapshot.hasError) {
-                          return SingleChildScrollView(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    const Icon(Icons.error, color: Colors.red),
-                                    const SizedBox(width: 8),
-                                    const Text(
-                                      'Error en el envío',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.red,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 16),
-                                SelectableText(
-                                  'Error: ${snapshot.error}',
-                                  style: const TextStyle(
-                                    fontFamily: 'monospace',
-                                    fontSize: 12,
-                                    color: Colors.red,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        } else if (snapshot.hasData) {
-                          final response = snapshot.data!;
-                          final isSuccess = response['success'] == true;
-                          final statusCode = response['statusCode'] ?? 0;
-                          final responseBody = response['body'] ?? {};
-
-                          return SingleChildScrollView(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Icon(
-                                      isSuccess
-                                          ? Icons.check_circle
-                                          : Icons.error,
-                                      color: isSuccess
-                                          ? Colors.green
-                                          : Colors.red,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      isSuccess
-                                          ? 'Enviado exitosamente'
-                                          : 'Error en el envío',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: isSuccess
-                                            ? Colors.green
-                                            : Colors.red,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Status Code: $statusCode',
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-                                const Text(
-                                  'Respuesta de la DGII:',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(4),
-                                    border: Border.all(
-                                      color: Colors.grey[300]!,
-                                    ),
-                                  ),
-                                  child: SelectableText(
-                                    JsonEncoder.withIndent(
-                                      '  ',
-                                    ).convert(responseBody),
-                                    style: const TextStyle(
-                                      fontFamily: 'monospace',
-                                      fontSize: 11,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        } else {
-                          return const Center(child: Text('Sin respuesta'));
-                        }
-                      },
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    ElevatedButton(
-                      onPressed: () => Get.back(),
-                      child: const Text('Cerrar'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-      barrierDismissible: false,
-    );
-  }
-  */
-
-  // Método para enviar al endpoint
-  Future<Map<String, dynamic>> _sendToEndpoint(
-    Map<String, dynamic> requestBody,
-  ) async {
-    try {
-      // Obtener la configuración directamente de Firebase
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        throw Exception('Usuario no autenticado');
-      }
-
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
-
-      if (!userDoc.exists) {
-        throw Exception('Datos de usuario no encontrados');
-      }
-
-      final userData = userDoc.data()!;
-      final companyRnc = userData['companyRnc'] as String?;
-
-      if (companyRnc == null || companyRnc.isEmpty) {
-        throw Exception('RNC de empresa no configurado');
-      }
-
-      final companyDoc = await FirebaseFirestore.instance
-          .collection('companies')
-          .doc(companyRnc)
-          .get();
-
-      if (!companyDoc.exists) {
-        throw Exception('Datos de empresa no encontrados');
-      }
-
-      final companyData = companyDoc.data()!;
-      final baseUrl =
-          companyData['baseEndpointUrl'] as String? ??
-          'https://ecfrecepcion.starsoftdominicana.com/ecf/api';
-
-      if (baseUrl.isEmpty) {
-        throw Exception(
-          'URL base no configurada. Ve a Configuración para establecer el endpoint.',
-        );
-      }
-
-      final url = '$baseUrl/test-scenarios-json';
-
-      debugPrint('[HomeController] POST URL: $url');
-      debugPrint(
-        '[HomeController] Request Body: ${JsonEncoder.withIndent('  ').convert(requestBody)}',
-      );
-
-      final response = await http
-          .post(
-            Uri.parse(url),
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-            },
-            body: jsonEncode(requestBody),
-          )
-          .timeout(const Duration(seconds: 30));
-
-      debugPrint('[HomeController] Response Status: ${response.statusCode}');
-      debugPrint('[HomeController] Response Body: ${response.body}');
-
-      Map<String, dynamic> responseBody = {};
-      try {
-        responseBody = jsonDecode(response.body);
-      } catch (e) {
-        responseBody = {'raw_response': response.body};
-      }
-
-      return {
-        'success': response.statusCode >= 200 && response.statusCode < 300,
-        'statusCode': response.statusCode,
-        'body': responseBody,
-      };
-    } catch (e) {
-      debugPrint('[HomeController] Error en _sendToEndpoint: $e');
-      return {
-        'success': false,
-        'statusCode': 0,
-        'body': {'error': e.toString()},
-      };
-    }
-  }
-
-  // Conversión de ERPInvoice a Map para el PDF service
-  Map<String, dynamic> _convertERPInvoiceToMap(ERPInvoice erp) {
-    return {
-      // Campos principales que usa el PDF service
-      'ENCF': erp.encf ?? erp.numeroFactura,
-      'NumeroFacturaInterna': erp.numerofacturainterna ?? erp.numeroFactura,
-      'FechaEmision':
-          erp.fechaemision ?? _formatDateForPdf(erp.fechaemisionDateTime),
-      'RNCEmisor': erp.rncemisor ?? '',
-      'RazonSocialEmisor': erp.razonsocialemisor ?? erp.empresaNombre,
-      'RNCComprador': erp.rnccomprador ?? '',
-      'RazonSocialComprador': erp.razonsocialcomprador ?? erp.clienteNombre,
-      'DireccionComprador': erp.direccioncomprador ?? '',
-      'MontoTotal': erp.montototal ?? '0.00',
-      'MontoGravadoTotal': erp.montogravadototal ?? '0.00',
-      'TotalITBIS': erp.totalitbis ?? '0.00',
-      'MontoExento': erp.montoexento ?? '0.00',
-      'CodigoSeguridad': '', // Debe ser llenado por el API de DGII
-      'TipoeCF': erp.tipoecf ?? '31',
-
-      // URL para QR Code
-      'linkOriginal': erp.linkOriginal ?? '',
-      'link_original': erp.linkOriginal ?? '',
-
-      // Campos adicionales que pueden ser útiles
-      'TelefonoEmisor[1]': erp.telefonoemisor1 ?? '',
-      'CorreoEmisor': erp.correoemisor ?? '',
-      'Website': erp.website ?? '',
-      'DireccionEmisor': erp.direccionemisor ?? '',
-      'Municipio': erp.municipio ?? '',
-      'Provincia': erp.provincia ?? '',
-      'TipoMoneda': erp.tipomoneda ?? 'DOP',
-
-      // Detalle de la factura (JSON string del ERP) - Solo para PDF service
-      'DetalleFactura': erp.detalleFactura ?? '',
-
-      // Nuevos campos del ERP actualizado
-      'rnc_paciente': erp.rncPaciente ?? '',
-      'aseguradora': erp.aseguradora ?? '',
-      'no_autorizacion': erp.noAutorizacion ?? '',
-      'nss': erp.nss ?? '',
-      'medico': erp.medico ?? '',
-      'cedula_medico': erp.cedulaMedico ?? '',
-      'tipo_factura_titulo': erp.tipoFacturaTitulo ?? 'CONTADO - LABORATORIO',
-      'monto_cobertura': erp.montoCobertura ?? '',
-    };
-  }
-
-  String _formatDateForPdf(DateTime? date) {
-    if (date == null) return '';
-    return '${date.day}/${date.month}/${date.year}';
   }
 
   // Conversión de Datum a ERPInvoice para datos fake
@@ -1361,6 +596,101 @@ class HomeController extends GetxController {
     debugPrint(
       '[HomeController] ${invoices.length} facturas agregadas a la cola',
     );
+  }
+
+  // Método para filtrar facturas por tipo de comprobante específico
+  List<ERPInvoice> getInvoicesByTipoComprobante(String tipoComprobante) {
+    return invoices.where((invoice) {
+      final tipo = _getTipoComprobanteFromEncf(invoice);
+      return tipo == tipoComprobante;
+    }).toList();
+  }
+
+  String? _getTipoComprobanteFromEncf(ERPInvoice invoice) {
+    String? result;
+
+    if (invoice.encf != null && invoice.encf!.length >= 3) {
+      result = invoice.encf!.substring(0, 3).toUpperCase();
+    } else if (invoice.tipoecf != null && invoice.tipoecf!.isNotEmpty) {
+      if (RegExp(r'^\d+$').hasMatch(invoice.tipoecf!)) {
+        result = 'B${invoice.tipoecf!.padLeft(2, '0')}';
+      } else {
+        result = invoice.tipoecf!.toUpperCase();
+      }
+    }
+
+    // Debug log para verificar la extracción
+    if (kDebugMode && result != null) {
+      debugPrint('[HomeController] ENCF: ${invoice.encf} -> Tipo: $result');
+    }
+
+    return result;
+  }
+
+  // Enviar facturas seleccionadas en lote
+  Future<void> sendSelectedInvoices() async {
+    // Validaciones
+    if (selectedInvoiceIds.isEmpty) {
+      Get.snackbar(
+        'Sin Selección',
+        'Por favor selecciona al menos una factura para enviar',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.orange,
+        colorText: Colors.white,
+        icon: const Icon(Icons.warning, color: Colors.white),
+      );
+      return;
+    }
+
+    // Obtener las facturas seleccionadas
+    final selectedInvoices = invoices
+        .where(
+          (inv) => inv.encf != null && selectedInvoiceIds.contains(inv.encf!),
+        )
+        .toList();
+
+    if (selectedInvoices.isEmpty) {
+      Get.snackbar(
+        'Error',
+        'No se encontraron facturas válidas para enviar',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    try {
+      // Agregar facturas a la cola de Firebase
+      await _addInvoicesToFirebaseQueue(selectedInvoices);
+
+      // Limpiar selección
+      clearSelection();
+
+      // Mostrar confirmación
+      Get.snackbar(
+        'Agregado a Cola',
+        '${selectedInvoices.length} factura(s) agregada(s) a la cola de envío',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+        icon: const Icon(Icons.queue, color: Colors.white),
+        duration: const Duration(seconds: 3),
+        mainButton: TextButton(
+          onPressed: () => Get.toNamed(AppRoutes.QUEUE),
+          child: const Text('Ver Cola', style: TextStyle(color: Colors.white)),
+        ),
+      );
+    } catch (e) {
+      debugPrint('[HomeController] Error agregando a cola: $e');
+      Get.snackbar(
+        'Error',
+        'No se pudieron agregar las facturas a la cola: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
   }
 }
 

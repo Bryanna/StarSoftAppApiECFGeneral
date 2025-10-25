@@ -368,7 +368,7 @@ class _SimpleInvoiceModalState extends State<SimpleInvoiceModal> {
   String _getFileName() {
     final rnc = widget.invoice.rncemisor ?? 'SIN_RNC';
     final encf = widget.invoice.encf ?? 'SIN_ENCF';
-    return '${rnc}${encf}.pdf';
+    return '$rnc$encf.pdf';
   }
 
   Future<void> _printPdf() async {
@@ -377,7 +377,7 @@ class _SimpleInvoiceModalState extends State<SimpleInvoiceModal> {
     try {
       final rnc = widget.invoice.rncemisor ?? 'SIN_RNC';
       final encf = widget.invoice.encf ?? 'SIN_ENCF';
-      final fileName = '${rnc}${encf}';
+      final fileName = '$rnc$encf';
 
       await Printing.layoutPdf(
         onLayout: (format) async => pdfBytes!,

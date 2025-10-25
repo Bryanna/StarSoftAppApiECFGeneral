@@ -54,9 +54,15 @@ class FakeDataService {
     final List<Datum> invoices = [];
 
     for (int i = 0; i < tiposData.length; i++) {
-      final data = tiposData[i];
+      final data = Map<String, dynamic>.from(tiposData[i]);
 
       try {
+        // Agregar campo tipo_tab_envio_factura si no existe
+        if (!data.containsKey('tipo_tab_envio_factura') &&
+            !data.containsKey('tipoTabEnvioFactura')) {
+          data['tipo_tab_envio_factura'] = _generateTipoTabEnvioFactura(data);
+        }
+
         // Usar el parser del modelo Invoice para crear el Datum
         final invoice = Datum.fromJson(data);
         invoices.add(invoice);
@@ -70,6 +76,86 @@ class FakeDataService {
       '[FakeDataService] Generated ${invoices.length} fake invoices from ejemplos.json',
     );
     return invoices;
+  }
+
+  /// Genera un tipo_tab_envio_factura basado en los datos de la factura
+  static String _generateTipoTabEnvioFactura(Map<String, dynamic> data) {
+    // Obtener el tipo de ENCF
+    String? encf = data['encf']?.toString();
+    String? tipoecf = data['tipoecf']?.toString();
+
+    // Determinar el tipo basado en ENCF o tipoecf
+    String tipoBase = '';
+
+    if (tipoecf != null && tipoecf.isNotEmpty) {
+      switch (tipoecf) {
+        case '31':
+          tipoBase = 'FacturaCredito';
+          break;
+        case '32':
+          tipoBase = 'FacturaConsumo';
+          break;
+        case '33':
+          tipoBase = 'NotaDebito';
+          break;
+        case '34':
+          tipoBase = 'NotaCredito';
+          break;
+        case '41':
+          tipoBase = 'CompraLocal';
+          break;
+        case '43':
+          tipoBase = 'GastoMenor';
+          break;
+        case '44':
+          tipoBase = 'RegimenEspecial';
+          break;
+        case '45':
+          tipoBase = 'CompraGubernamental';
+          break;
+        case '46':
+          tipoBase = 'Exportacion';
+          break;
+        case '47':
+          tipoBase = 'PagoExterior';
+          break;
+        default:
+          tipoBase = 'FacturaGeneral';
+      }
+    } else if (encf != null && encf.length >= 3) {
+      String tipoFromEncf = encf.substring(1, 3);
+      switch (tipoFromEncf) {
+        case '31':
+          tipoBase = 'FacturaCredito';
+          break;
+        case '32':
+          tipoBase = 'FacturaConsumo';
+          break;
+        case '33':
+          tipoBase = 'NotaDebito';
+          break;
+        case '34':
+          tipoBase = 'NotaCredito';
+          break;
+        default:
+          tipoBase = 'FacturaGeneral';
+      }
+    } else {
+      tipoBase = 'FacturaGeneral';
+    }
+
+    // Agregar variación para ARS si es apropiado
+    String? razonsocial = data['razonsocialcomprador']
+        ?.toString()
+        .toLowerCase();
+    if (razonsocial != null &&
+        (razonsocial.contains('ars') || razonsocial.contains('salud'))) {
+      if (tipoBase.startsWith('Factura')) {
+        tipoBase = 'FacturaArs';
+      }
+    }
+
+    return tipoBase;
   }
 
   /// Genera facturas específicas para diferentes categorías

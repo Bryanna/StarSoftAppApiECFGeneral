@@ -3,8 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
 import '../models/erp_invoice.dart';
+import '../models/ui_types.dart';
 import '../services/dynamic_tabs_service.dart';
-import '../services/fake_data_service.dart';
 import '../services/invoice_service.dart';
 import '../widgets/simple_invoice_modal.dart';
 
@@ -46,18 +46,20 @@ class DynamicHomeController extends GetxController {
   }
 
   /// Carga todas las facturas y genera tabs dinámicos
-  Future<void> loadAllInvoices() async {
-    debugPrint('[DynamicHomeController] loadAllInvoices start');
+  Future<void> loadAllInvoices({bool forceReal = false}) async {
+    debugPrint(
+      '[DynamicHomeController] loadAllInvoices start (forceReal: $forceReal)',
+    );
     loading = true;
     _clearErrors();
     update();
 
     try {
-      // Cargar datos desde el servicio
-      final datumList = await FakeDataService.generateFakeInvoicesFromJson();
-      allInvoices = datumList
-          .map((datum) => _convertDatumToERPInvoice(datum))
-          .toList();
+      // Cargar datos desde el servicio (puede ser real o fake según configuración)
+      allInvoices = await _service.fetchInvoices(
+        InvoiceCategory.todos,
+        forceReal: forceReal,
+      );
 
       debugPrint(
         '[DynamicHomeController] Loaded ${allInvoices.length} invoices',
@@ -74,6 +76,9 @@ class DynamicHomeController extends GetxController {
         currentTab = dynamicTabs.first;
         _filterInvoicesByCurrentTab();
       }
+
+      // Debug: Imprimir estado después de cargar
+      debugPrintState();
     } catch (e) {
       _handleError(e);
       allInvoices = [];
@@ -158,9 +163,18 @@ class DynamicHomeController extends GetxController {
   }
 
   /// Refresca los datos
+  @override
   Future<void> refresh() async {
     debugPrint('[DynamicHomeController] refresh');
     await loadAllInvoices();
+  }
+
+  /// Fuerza la carga desde el endpoint real (no fake data)
+  Future<void> loadFromRealEndpoint() async {
+    debugPrint(
+      '[DynamicHomeController] loadFromRealEndpoint - forcing real data',
+    );
+    await loadAllInvoices(forceReal: true);
   }
 
   // Métodos de selección
@@ -267,64 +281,30 @@ class DynamicHomeController extends GetxController {
     }
   }
 
-  /// Convierte un Datum del modelo legacy a ERPInvoice
-  ERPInvoice _convertDatumToERPInvoice(dynamic datum) {
-    return ERPInvoice(
-      fFacturaSecuencia: datum.fFacturaSecuencia,
-      version: datum.version,
-      tipoecf: datum.tipoecf,
-      encf: datum.encf,
-      fechavencimientosecuencia: datum.fechavencimientosecuencia?.toString(),
-      indicadorenviodiferido: datum.indicadorenviodiferido?.toString(),
-      indicadormontogravado: datum.indicadormontogravado,
-      indicadornotacredito: datum.indicadornotacredito,
-      tipoingresos: datum.tipoingresos,
-      tipopago: datum.tipopago,
-      formapago1: datum.formapago1,
-      montopago1: datum.montopago1,
-      formapago2: datum.formapago2,
-      montopago2: datum.montopago2,
-      rncemisor: datum.rncemisor,
-      razonsocialemisor: datum.razonsocialemisor?.toString(),
-      nombrecomercial: datum.nombrecomercial?.toString(),
-      direccionemisor: datum.direccionemisor?.toString(),
-      municipio: datum.municipio,
-      provincia: datum.provincia,
-      telefonoemisor1: datum.telefonoemisor1?.toString(),
-      correoemisor: datum.correoemisor,
-      website: datum.website?.toString(),
-      actividadeconomica: datum.actividadeconomica?.toString(),
-      codigovendedor: datum.codigovendedor?.toString(),
-      numerofacturainterna: datum.numerofacturainterna?.toString(),
-      numeropedidointerno: datum.numeropedidointerno?.toString(),
-      zonaventa: datum.zonaventa?.toString(),
-      fechaemision: datum.fechaemision?.toString(),
-      rnccomprador: datum.rnccomprador,
-      razonsocialcomprador: datum.razonsocialcomprador?.toString(),
-      contactocomprador: datum.contactocomprador?.toString(),
-      correocomprador: datum.correocomprador?.toString(),
-      direccioncomprador: datum.direccioncomprador,
-      municipiocomprador: datum.municipiocomprador,
-      provinciacomprador: datum.provinciacomprador,
-      fechaentrega: datum.fechaentrega?.toString(),
-      telefonoadicional: datum.telefonoadicional?.toString(),
-      fechaordencompra: datum.fechaordencompra?.toString(),
-      numeroordencompra: datum.numeroordencompra,
-      montogravadototal: datum.montogravadototal,
-      montoexento: datum.montoexento,
-      totalitbis: datum.totalitbis,
-      montototal: datum.montototal,
-      valorpagar: datum.valorpagar,
-      totalitbisretenido: datum.totalitbisretenido,
-      totalisrretencion: datum.totalisrretencion,
-      tipomoneda: datum.tipomoneda,
-      tipocambio: datum.tipocambio,
-      fechahorafirma: datum.fechahorafirma?.toString(),
-      codigoseguridad: datum.codigoseguridad?.toString(),
-      linkOriginal: datum.linkOriginal,
-      tipoComprobante: datum.tipoComprobante,
-      detalleFactura: datum.detalleFactura,
-      tipoTabEnvioFactura: datum.tipoTabEnvioFactura,
-    );
+
+
+  /// Método de debug para verificar el estado del controlador
+  void debugPrintState() {
+    debugPrint('=== DEBUG DYNAMIC HOME CONTROLLER ===');
+    debugPrint('Loading: $loading');
+    debugPrint('All invoices: ${allInvoices.length}');
+    debugPrint('Filtered invoices: ${filteredInvoices.length}');
+    debugPrint('Dynamic tabs: ${dynamicTabs.length}');
+    debugPrint('Current tab: ${currentTab?.label ?? "null"}');
+
+    for (int i = 0; i < allInvoices.take(3).length; i++) {
+      final invoice = allInvoices[i];
+      debugPrint(
+        'Invoice $i: ENCF=${invoice.encf}, TipoECF=${invoice.tipoecf}, TipoTab=${invoice.tipoTabEnvioFactura}',
+      );
+    }
+
+    for (int i = 0; i < dynamicTabs.length; i++) {
+      final tab = dynamicTabs[i];
+      debugPrint(
+        'Tab $i: ${tab.label} (${tab.count}) - TabType: ${tab.tabType}, EncfType: ${tab.encfType}',
+      );
+    }
+    debugPrint('=====================================');
   }
 }

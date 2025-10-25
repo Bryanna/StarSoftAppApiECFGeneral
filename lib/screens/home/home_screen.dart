@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
+
 import '../../models/erp_invoice.dart';
 import '../../models/erp_invoice_extensions.dart';
 import '../../models/ui_types.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import '../../widgets/invoice_table.dart';
-import 'home_controller.dart';
 import '../../routes/app_routes.dart';
 import '../../services/firebase_auth_service.dart';
 import '../../services/user_service.dart';
-import 'package:get_storage/get_storage.dart';
+import '../../widgets/invoice_table.dart';
+import 'home_controller.dart';
 
 // Refactor: usamos StatelessWidget con estado manejado por GetX en HomeController
 class HomeScreen extends StatelessWidget {
@@ -321,6 +322,16 @@ class HomeScreen extends StatelessWidget {
   }
 
   String _titleFor(InvoiceCategory category) {
+    final controller = Get.find<HomeController>();
+
+    // Si hay un tipo de comprobante específico seleccionado, usar su display
+    if (controller.currentTipoComprobante != null &&
+        controller.invoices.isNotEmpty) {
+      final firstInvoice = controller.invoices.first;
+      return firstInvoice.tipoComprobanteDisplay;
+    }
+
+    // Fallback a títulos estáticos por categoría
     switch (category) {
       case InvoiceCategory.todos:
         return 'Todas las Facturas';
@@ -329,11 +340,11 @@ class HomeScreen extends StatelessWidget {
       case InvoiceCategory.ars:
         return 'Facturas ARS';
       case InvoiceCategory.notasCredito:
-        return 'Notas Crédito';
+        return 'Notas de Crédito';
       case InvoiceCategory.notasDebito:
-        return 'Notas Débito';
+        return 'Notas de Débito';
       case InvoiceCategory.gastos:
-        return 'Facturas Gastos';
+        return 'Gastos Menores';
       case InvoiceCategory.enviados:
         return 'Documentos Enviados';
       case InvoiceCategory.rechazados:
@@ -619,7 +630,8 @@ class _DynamicTabsBar extends StatelessWidget {
     return GetBuilder<HomeController>(
       builder: (controller) {
         // Generar tabs dinámicos basados en los tipos de ENCF encontrados
-        final dynamicTabs = _generateDynamicTabs(controller.invoices);
+        final sourceList = controller.allInvoices.isNotEmpty ? controller.allInvoices : controller.invoices;
+final dynamicTabs = _generateDynamicTabs(sourceList);
 
         return SizedBox(
           width: double.infinity,
@@ -661,15 +673,17 @@ class _DynamicTabsBar extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 6),
-                    _Badge(count: controller.invoices.length),
+                    _Badge(count: controller.allInvoices.length),
                   ],
                 ),
-                selected: controller.currentCategory == InvoiceCategory.todos,
+                selected:
+                    controller.currentCategory == InvoiceCategory.todos &&
+                    controller.currentTipoComprobante == null,
                 onSelected: (_) =>
                     controller.loadCategory(InvoiceCategory.todos),
               ),
 
-              // Tabs dinámicos por tipo de ENCF
+              // Tabs dinámicos por tipo de comprobante
               for (final tab in dynamicTabs)
                 ChoiceChip(
                   labelPadding: const EdgeInsets.symmetric(horizontal: 10),
@@ -693,14 +707,14 @@ class _DynamicTabsBar extends StatelessWidget {
                       Text(
                         tab.label,
                         style: TextStyle(
-                          color: controller.currentCategory == tab.category
+                          color: _isTabSelected(controller, tab)
                               ? (tab.category == InvoiceCategory.rechazados
-                                    ? Theme.of(context).colorScheme.onError
-                                    : Theme.of(
-                                        context,
-                                      ).colorScheme.onPrimaryContainer)
+                                  ? Theme.of(context).colorScheme.onError
+                                  : Theme.of(context)
+                                      .colorScheme
+                                      .onPrimaryContainer)
                               : Theme.of(context).colorScheme.onSurfaceVariant,
-                          fontWeight: controller.currentCategory == tab.category
+                          fontWeight: _isTabSelected(controller, tab)
                               ? FontWeight.w600
                               : FontWeight.normal,
                         ),
@@ -709,8 +723,8 @@ class _DynamicTabsBar extends StatelessWidget {
                       _Badge(count: tab.count),
                     ],
                   ),
-                  selected: controller.currentCategory == tab.category,
-                  onSelected: (_) => controller.loadCategory(tab.category),
+                  selected: _isTabSelected(controller, tab),
+                  onSelected: (_) => _selectTab(controller, tab),
                 ),
             ],
           ),
@@ -722,46 +736,70 @@ class _DynamicTabsBar extends StatelessWidget {
   List<_DynamicTab> _generateDynamicTabs(List<ERPInvoice> invoices) {
     if (invoices.isEmpty) return [];
 
-    // Mapear tipos de ENCF encontrados
-    final Map<String, int> encfTypeCounts = {};
-    final Map<String, String> encfTypeLabels = {
-      '31': 'Crédito Fiscal',
-      '32': 'Consumo',
-      '33': 'Nota Débito',
-      '34': 'Nota Crédito',
-      '41': 'Compras',
-      '43': 'Gastos Menores',
-      '44': 'Regímenes Especiales',
-      '45': 'Gubernamental',
-    };
-    final Map<String, String> encfTypeIcons = {
-      '31': '💰',
-      '32': '🛒',
-      '33': '📈',
-      '34': '📉',
-      '41': '🏪',
-      '43': '💸',
-      '44': '⚖️',
-      '45': '🏛️',
-    };
+    // Mapear tipos de comprobante usando los primeros 3 caracteres del ENCF
+    final Map<String, int> tipoComprobanteCounts = {};
+    final Map<String, String> tipoComprobanteLabels = {};
+    final Map<String, String> tipoComprobanteIcons = {};
 
-    // Contar tipos de ENCF
+    // Contar tipos de comprobante usando la extensión
     for (final invoice in invoices) {
-      final encfType = _extractEncfType(invoice);
-      if (encfType != null) {
-        encfTypeCounts[encfType] = (encfTypeCounts[encfType] ?? 0) + 1;
+      final tipoComprobante = _extractTipoComprobanteFromEncf(invoice);
+      if (tipoComprobante != null) {
+        tipoComprobanteCounts[tipoComprobante] =
+            (tipoComprobanteCounts[tipoComprobante] ?? 0) + 1;
+
+        // Usar la función tipoComprobanteDisplay de las extensiones
+        tipoComprobanteLabels[tipoComprobante] = invoice.tipoComprobanteDisplay;
+        tipoComprobanteIcons[tipoComprobante] = _getIconForTipoComprobante(
+          tipoComprobante,
+        );
       }
     }
 
     // Generar tabs dinámicos
     final List<_DynamicTab> tabs = [];
 
-    for (final entry in encfTypeCounts.entries) {
-      final encfType = entry.key;
+    // Primero: tabs por tipo_tab_envio_factura (después de 'Todos')
+    final arsCount = invoices
+        .where((inv) => (inv.tipoTabEnvioFactura?.toLowerCase().contains('ars') ?? false))
+        .length;
+    final pacienteCount = invoices
+        .where((inv) => (inv.tipoTabEnvioFactura?.toLowerCase().contains('paciente') ?? false))
+        .length;
+
+    // Mostrar siempre estos tabs, aunque el conteo sea 0
+    tabs.add(
+      _DynamicTab(
+        label: 'ARS',
+        icon: '🏥',
+        category: InvoiceCategory.ars,
+        count: arsCount,
+        tipoComprobante: null,
+        tabType: 'FacturaArs',
+        isSpecificType: true,
+      ),
+    );
+
+    tabs.add(
+      _DynamicTab(
+        label: 'Pacientes',
+        icon: '👤',
+        category: InvoiceCategory.pacientes,
+        count: pacienteCount,
+        tipoComprobante: null,
+        tabType: 'FacturaPaciente',
+        isSpecificType: true,
+      ),
+    );
+
+    // Luego: tabs por tipo de comprobante (ENCF)
+    for (final entry in tipoComprobanteCounts.entries) {
+      final tipoComprobante = entry.key;
       final count = entry.value;
-      final label = encfTypeLabels[encfType] ?? 'Tipo $encfType';
-      final icon = encfTypeIcons[encfType] ?? '📄';
-      final category = _mapEncfTypeToCategory(encfType);
+      final label =
+          tipoComprobanteLabels[tipoComprobante] ?? 'Tipo $tipoComprobante';
+      final icon = tipoComprobanteIcons[tipoComprobante] ?? '📄';
+      final category = _mapTipoComprobanteToCategory(tipoComprobante);
 
       tabs.add(
         _DynamicTab(
@@ -769,7 +807,8 @@ class _DynamicTabsBar extends StatelessWidget {
           icon: icon,
           category: category,
           count: count,
-          encfType: encfType,
+          tipoComprobante: tipoComprobante,
+          isSpecificType: true,
         ),
       );
     }
@@ -785,7 +824,8 @@ class _DynamicTabsBar extends StatelessWidget {
           icon: '✅',
           category: InvoiceCategory.enviados,
           count: enviados,
-          encfType: null,
+          tipoComprobante: null,
+          isSpecificType: false,
         ),
       );
     }
@@ -797,7 +837,8 @@ class _DynamicTabsBar extends StatelessWidget {
           icon: '❌',
           category: InvoiceCategory.rechazados,
           count: rechazados,
-          encfType: null,
+          tipoComprobante: null,
+          isSpecificType: false,
         ),
       );
     }
@@ -805,51 +846,202 @@ class _DynamicTabsBar extends StatelessWidget {
     return tabs;
   }
 
-  String? _extractEncfType(ERPInvoice invoice) {
-    // Prioridad: tipoecf > extraer de encf > tipoComprobante
+  String? _extractTipoComprobanteFromEncf(ERPInvoice invoice) {
+    // Usar los primeros 3 caracteres del ENCF como especifica el usuario
+    if (invoice.encf != null && invoice.encf!.length >= 3) {
+      return invoice.encf!.substring(0, 3).toUpperCase();
+    }
+
+    // Fallback: usar tipoecf si no hay encf
     if (invoice.tipoecf != null && invoice.tipoecf!.isNotEmpty) {
-      return invoice.tipoecf!;
-    }
-
-    if (invoice.encf != null && invoice.encf!.isNotEmpty) {
-      // Extraer tipo del ENCF (ej: E320000000123 -> 32)
-      final encf = invoice.encf!;
-      if (encf.length >= 3 && encf.startsWith('E')) {
-        return encf.substring(1, 3);
+      // Si tipoecf es solo números (ej: "32"), agregar prefijo para NCF tradicionales
+      if (RegExp(r'^\d+$').hasMatch(invoice.tipoecf!)) {
+        return 'B${invoice.tipoecf!.padLeft(2, '0')}'; // ej: "32" -> "B32"
       }
-    }
-
-    if (invoice.tipoComprobante != null &&
-        invoice.tipoComprobante!.isNotEmpty) {
-      return invoice.tipoComprobante!;
+      return invoice.tipoecf!.toUpperCase();
     }
 
     return null;
   }
 
-  InvoiceCategory _mapEncfTypeToCategory(String encfType) {
-    switch (encfType) {
-      case '31':
-      case '32':
+  InvoiceCategory _mapTipoComprobanteToCategory(String tipoComprobante) {
+    // Mapear tipos de comprobante a categorías existentes
+    switch (tipoComprobante) {
+      // e-CF Crédito Fiscal y Consumo -> Pacientes
+      case 'E31':
+      case 'E32':
+      case 'B01':
+      case 'C01':
+      case 'P01':
+      case 'B02':
+      case 'C02':
+      case 'P02':
         return InvoiceCategory.pacientes;
-      case '33':
+
+      // Notas de Débito
+      case 'E33':
+      case 'B03':
+      case 'C03':
+      case 'P03':
         return InvoiceCategory.notasDebito;
-      case '34':
+
+      // Notas de Crédito
+      case 'E34':
+      case 'B04':
+      case 'C04':
+      case 'P04':
         return InvoiceCategory.notasCredito;
-      case '43':
+
+      // Gastos Menores
+      case 'E43':
+      case 'B13':
+      case 'C13':
+      case 'P13':
         return InvoiceCategory.gastos;
+
+      // Compras -> ARS (asumiendo que las compras son para ARS)
+      case 'E41':
+      case 'B11':
+      case 'C11':
+      case 'P11':
+        return InvoiceCategory.ars;
+
       default:
         return InvoiceCategory.todos;
     }
   }
 
   bool _isEnviado(ERPInvoice invoice) {
+    // Priorizar estado del endpoint si existe
+    final code = invoice.estadoCode;
+    if (code != null) {
+      return code == 3; // 3 = Enviado
+    }
+    // Fallback a la lógica anterior
     return (invoice.linkOriginal != null && invoice.linkOriginal!.isNotEmpty) ||
         (invoice.fechahorafirma != null && invoice.fechahorafirma!.isNotEmpty);
   }
 
   bool _isRechazado(ERPInvoice invoice) {
+    // Priorizar estado del endpoint si existe
+    final code = invoice.estadoCode;
+    if (code != null) {
+      return code == 2; // 2 = Rechazado
+    }
+    // Fallback a la lógica anterior
     return invoice.fAnulada == true;
+  }
+
+  String _getIconForTipoComprobante(String tipoComprobante) {
+    switch (tipoComprobante) {
+      // e-CF (Comprobantes Electrónicos)
+      case 'E31':
+        return '💰'; // Crédito Fiscal Electrónico
+      case 'E32':
+        return '🛒'; // Consumo Electrónico
+      case 'E33':
+        return '📈'; // Nota de Débito Electrónica
+      case 'E34':
+        return '📉'; // Nota de Crédito Electrónica
+      case 'E41':
+        return '🏪'; // Compras Electrónico
+      case 'E43':
+        return '💸'; // Gastos Menores Electrónico
+      case 'E44':
+        return '⚖️'; // Regímenes Especiales Electrónico
+      case 'E45':
+        return '🏛️'; // Gubernamental Electrónico
+
+      // Comprobantes Fiscales tradicionales (NCF)
+      case 'B01':
+      case 'C01':
+      case 'P01':
+        return '💳'; // Factura con Crédito Fiscal
+      case 'B02':
+      case 'C02':
+      case 'P02':
+        return '🧾'; // Factura de Consumo
+      case 'B03':
+      case 'C03':
+      case 'P03':
+        return '📊'; // Nota de Débito
+      case 'B04':
+      case 'C04':
+      case 'P04':
+        return '📋'; // Nota de Crédito
+      case 'B11':
+      case 'C11':
+      case 'P11':
+        return '🏥'; // Factura de Compras (ARS)
+      case 'B13':
+      case 'C13':
+      case 'P13':
+        return '💵'; // Gastos Menores
+      case 'B14':
+      case 'C14':
+      case 'P14':
+        return '📜'; // Regímenes Especiales
+      case 'B15':
+      case 'C15':
+      case 'P15':
+        return '🏢'; // Factura Gubernamental
+
+      // Comprobantes Especiales
+      case 'B16':
+        return '🌍'; // Exportaciones
+      case 'B17':
+        return '🏭'; // Zona Franca
+      case 'B18':
+        return '📱'; // Omnipresentes
+      case 'B19':
+        return '🏖️'; // Turísticas
+      case 'B20':
+        return '⚡'; // Provisional Electrónicas
+      case 'B21':
+        return '🎁'; // Donaciones
+      case 'B22':
+      case 'B23':
+        return '🔒'; // Retenciones
+
+      default:
+        return '📄'; // Genérico
+    }
+  }
+
+  // Método para verificar si un tab está seleccionado
+  bool _isTabSelected(HomeController controller, _DynamicTab tab) {
+    if (tab.isSpecificType) {
+      if (tab.tipoComprobante != null) {
+        // Para tabs específicos por tipo de comprobante
+        return controller.currentTipoComprobante == tab.tipoComprobante;
+      }
+      if (tab.tabType != null) {
+        // Para tabs específicos por tipo_tab_envio_factura
+        return controller.currentTabType == tab.tabType;
+      }
+    }
+    // Para tabs generales, verificar la categoría y que no haya filtros específicos activos
+    return controller.currentCategory == tab.category &&
+        controller.currentTipoComprobante == null &&
+        controller.currentTabType == null;
+  }
+
+  // Método para seleccionar un tab
+  void _selectTab(HomeController controller, _DynamicTab tab) {
+    if (tab.isSpecificType) {
+      if (tab.tipoComprobante != null) {
+        // Cargar por tipo de comprobante específico
+        controller.loadByTipoComprobante(tab.tipoComprobante!);
+        return;
+      }
+      if (tab.tabType != null) {
+        // Cargar por tipo_tab_envio_factura
+        controller.loadByTabType(tab.tabType!);
+        return;
+      }
+    }
+    // Cargar por categoría general
+    controller.loadCategory(tab.category);
   }
 }
 
@@ -858,14 +1050,18 @@ class _DynamicTab {
   final String icon;
   final InvoiceCategory category;
   final int count;
-  final String? encfType;
+  final String? tipoComprobante; // Cambiado de encfType a tipoComprobante
+  final String? tabType; // Nuevo: tipo_tab_envio_factura (FacturaArs/Paciente)
+  final bool isSpecificType; // Nuevo: indica si es un tipo específico
 
   const _DynamicTab({
     required this.label,
     required this.icon,
     required this.category,
     required this.count,
-    this.encfType,
+    this.tipoComprobante,
+    this.tabType,
+    this.isSpecificType = false,
   });
 }
 

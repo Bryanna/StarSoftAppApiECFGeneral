@@ -22,34 +22,63 @@ class InvoiceService {
   final ERPEndpointService _endpointService = ERPEndpointService();
 
   // Obtiene facturas reales desde el endpoint ERP configurado o datos fake
-  Future<List<ERPInvoice>> fetchInvoices(InvoiceCategory category) async {
+  Future<List<ERPInvoice>> fetchInvoices(
+    InvoiceCategory category, {
+    bool forceReal = false,
+  }) async {
     try {
-      // Verificar si debemos usar datos fake
-      final useFakeData = await _shouldUseFakeData();
+      // Verificar si debemos usar datos fake (a menos que se fuerce usar real)
+      final useFakeData = forceReal ? false : await _shouldUseFakeData();
+
+      debugPrint(
+        '[InvoiceService] forceReal: $forceReal, useFakeData: $useFakeData',
+      );
 
       if (useFakeData) {
         debugPrint('[InvoiceService] Using fake data (configured in settings)');
         return await _generateFakeInvoices(category);
       }
 
-      // Intentar obtener datos reales del ERP usando endpoints configurados
+      // Intentar obtener datos reales del ERP combinando múltiples endpoints
       debugPrint(
-        '[InvoiceService] Attempting to fetch real data from ERP endpoints',
+        '[InvoiceService] Attempting to fetch and combine data from multiple ERP endpoints',
       );
-      final endpoints = await _getConfiguredEndpoints();
 
-      if (endpoints.isEmpty) {
-        throw ERPNotConfiguredException('No hay endpoints ERP configurados');
+      // Obtener URLs de ambos endpoints configurados (ARS + Invoices)
+      final endpointUrls = await _getAllConfiguredEndpointUrls();
+
+      debugPrint(
+        '[InvoiceService] Found ${endpointUrls.length} endpoint URLs to call',
+      );
+      for (int i = 0; i < endpointUrls.length; i++) {
+        debugPrint('[InvoiceService] URL ${i + 1}: ${endpointUrls[i]}');
       }
 
-      // Usar el primer endpoint de facturas o el primero disponible
-      final invoiceEndpoint = endpoints.firstWhere(
-        (e) => e.type == EndpointType.invoices,
-        orElse: () => endpoints.first,
-      );
+      if (endpointUrls.isEmpty) {
+        debugPrint(
+          '[InvoiceService] No endpoints configured, trying legacy system...',
+        );
+        // Fallback al sistema legacy de ERPEndpoint
+        final endpoints = await _getConfiguredEndpoints();
+        if (endpoints.isEmpty) {
+          throw ERPNotConfiguredException('No hay endpoints ERP configurados');
+        }
 
-      // Realizar llamada HTTP al ERP
-      return await _fetchFromERP(invoiceEndpoint.url, category);
+        final invoiceEndpoint = endpoints.firstWhere(
+          (e) => e.type == EndpointType.invoices,
+          orElse: () => endpoints.first,
+        );
+        return await _fetchFromERP(invoiceEndpoint.url, category);
+      }
+
+      // IMPORTANTE: Realizar llamadas HTTP a TODOS los endpoints y combinar resultados
+      debugPrint(
+        '[InvoiceService] Calling _fetchAndCombineFromMultipleEndpoints with ${endpointUrls.length} URLs',
+      );
+      return await _fetchAndCombineFromMultipleEndpoints(
+        endpointUrls,
+        category,
+      );
     } on ERPNotConfiguredException {
       rethrow;
     } on NoInvoicesFoundException {
@@ -97,7 +126,262 @@ class InvoiceService {
     }
   }
 
-  // Obtiene los endpoints configurados del ERP
+  // Obtiene TODAS las URLs de endpoints configurados para combinar datos
+  Future<List<String>> _getAllConfiguredEndpointUrls() async {
+    try {
+      final List<String> urls = [];
+
+      debugPrint('[InvoiceService] Getting all configured endpoint URLs...');
+
+      // Intentar obtener del controller si está registrado
+      if (Get.isRegistered<ConfiguracionController>()) {
+        final controller = Get.find<ConfiguracionController>();
+
+        debugPrint(
+          '[InvoiceService] Controller found with ${controller.erpEndpoints.length} endpoints',
+        );
+        debugPrint('[InvoiceService] Base URL: ${controller.baseERPUrl}');
+        debugPrint(
+          '[InvoiceService] Endpoints map: ${controller.erpEndpoints}',
+        );
+
+        // IMPORTANTE: Agregar TODOS los endpoints configurados, no solo algunos específicos
+        for (final entry in controller.erpEndpoints.entries) {
+          final key = entry.key;
+          final endpoint = entry.value;
+          final fullUrl = controller.getFullEndpointUrl(key);
+
+          if (!urls.contains(fullUrl)) {
+            urls.add(fullUrl);
+            debugPrint('[InvoiceService] ✅ Added endpoint ($key): $fullUrl');
+          } else {
+            debugPrint(
+              '[InvoiceService] ⚠️ Skipped duplicate URL ($key): $fullUrl',
+            );
+          }
+        }
+      } else {
+        // Si no está registrado, intentar obtener directamente de Firestore
+        final uid = _auth.currentUser?.uid;
+        if (uid != null) {
+          final userDoc = await _db.doc('users/$uid').get();
+          final userData = userDoc.data();
+          final companyRnc = userData?['companyRnc'] as String?;
+
+          if (companyRnc != null) {
+            debugPrint(
+              '[InvoiceService] Reading from Firestore for company: $companyRnc',
+            );
+
+            final companyDoc = await _db.doc('companies/$companyRnc').get();
+            final companyData = companyDoc.data();
+            final baseERPUrl = companyData?['baseERPUrl'] as String?;
+
+            debugPrint('[InvoiceService] Base URL from Firestore: $baseERPUrl');
+
+            if (baseERPUrl != null) {
+              // CORRECCIÓN: Leer desde la subcollection erp_endpoints
+              debugPrint(
+                '[InvoiceService] Reading from subcollection: companies/$companyRnc/erp_endpoints',
+              );
+
+              final endpointsSnapshot = await _db
+                  .collection('companies/$companyRnc/erp_endpoints')
+                  .get();
+
+              debugPrint(
+                '[InvoiceService] Found ${endpointsSnapshot.docs.length} endpoint documents in subcollection',
+              );
+
+              for (final doc in endpointsSnapshot.docs) {
+                final data = doc.data();
+                final url =
+                    data['url']
+                        as String?; // CORRECCIÓN: usar 'url' en lugar de 'endpoint'
+                final name = data['name'] as String?;
+                final type = data['type'] as String?;
+
+                debugPrint(
+                  '[InvoiceService] Processing endpoint doc: ${doc.id}',
+                );
+                debugPrint('[InvoiceService] Endpoint data: $data');
+
+                if (url != null) {
+                  if (!urls.contains(url)) {
+                    urls.add(url);
+                    debugPrint(
+                      '[InvoiceService] ✅ Added endpoint from subcollection (${doc.id}): $url',
+                    );
+                    debugPrint('[InvoiceService] ✅ Name: $name, Type: $type');
+                  } else {
+                    debugPrint(
+                      '[InvoiceService] ⚠️ Skipped duplicate URL from subcollection (${doc.id}): $url',
+                    );
+                  }
+                } else {
+                  debugPrint(
+                    '[InvoiceService] ❌ No url field found in doc: ${doc.id}',
+                  );
+                }
+              }
+
+              // Fallback: También intentar leer desde el campo erpEndpoints del documento principal
+              final erpEndpoints =
+                  companyData?['erpEndpoints'] as Map<String, dynamic>?;
+              if (erpEndpoints != null) {
+                debugPrint(
+                  '[InvoiceService] Also found erpEndpoints field in main document',
+                );
+                for (final entry in erpEndpoints.entries) {
+                  final endpoint = entry.value as String;
+                  final url = _buildFullUrl(baseERPUrl, endpoint);
+                  if (!urls.contains(url)) {
+                    urls.add(url);
+                    debugPrint(
+                      '[InvoiceService] ✅ Added endpoint from main document (${entry.key}): $url',
+                    );
+                  }
+                }
+              }
+
+              debugPrint(
+                '[InvoiceService] Total unique URLs collected: ${urls.length}',
+              );
+            } else {
+              debugPrint(
+                '[InvoiceService] ❌ No baseERPUrl found in company document',
+              );
+            }
+          } else {
+            debugPrint('[InvoiceService] ❌ No companyRnc found for user');
+          }
+        } else {
+          debugPrint('[InvoiceService] ❌ No authenticated user');
+        }
+      }
+
+      debugPrint('[InvoiceService] Total endpoints to fetch: ${urls.length}');
+      return urls;
+    } catch (e) {
+      debugPrint(
+        '[InvoiceService] Error getting all configured endpoint URLs: $e',
+      );
+      return [];
+    }
+  }
+
+  // Obtiene la URL del endpoint configurado en ConfiguracionController (método legacy)
+  Future<String?> _getConfiguredEndpointUrl() async {
+    try {
+      // Intentar obtener del controller si está registrado
+      if (Get.isRegistered<ConfiguracionController>()) {
+        final controller = Get.find<ConfiguracionController>();
+
+        // Prioridad: ars > ars_alt > invoices > primer endpoint disponible
+        if (controller.erpEndpoints.containsKey('ars')) {
+          final url = controller.getFullEndpointUrl('ars');
+          debugPrint('[InvoiceService] Using ARS endpoint: $url');
+          return url;
+        }
+
+        if (controller.erpEndpoints.containsKey('ars_alt')) {
+          final url = controller.getFullEndpointUrl('ars_alt');
+          debugPrint('[InvoiceService] Using ARS_ALT endpoint: $url');
+          return url;
+        }
+
+        if (controller.erpEndpoints.containsKey('invoices')) {
+          final url = controller.getFullEndpointUrl('invoices');
+          debugPrint('[InvoiceService] Using INVOICES endpoint: $url');
+          return url;
+        }
+
+        // Si hay otros endpoints, usar el primero
+        if (controller.erpEndpoints.isNotEmpty) {
+          final firstKey = controller.erpEndpoints.keys.first;
+          final url = controller.getFullEndpointUrl(firstKey);
+          debugPrint(
+            '[InvoiceService] Using first available endpoint ($firstKey): $url',
+          );
+          return url;
+        }
+      }
+
+      // Si no está registrado, intentar obtener directamente de Firestore
+      final uid = _auth.currentUser?.uid;
+      if (uid == null) return null;
+
+      final userDoc = await _db.doc('users/$uid').get();
+      final userData = userDoc.data();
+      final companyRnc = userData?['companyRnc'] as String?;
+
+      if (companyRnc == null) return null;
+
+      final companyDoc = await _db.doc('companies/$companyRnc').get();
+      final companyData = companyDoc.data();
+
+      final baseERPUrl = companyData?['baseERPUrl'] as String?;
+      final erpEndpoints =
+          companyData?['erpEndpoints'] as Map<String, dynamic>?;
+
+      if (baseERPUrl != null && erpEndpoints != null) {
+        // Misma lógica de prioridad
+        if (erpEndpoints.containsKey('ars')) {
+          final endpoint = erpEndpoints['ars'] as String;
+          final url = _buildFullUrl(baseERPUrl, endpoint);
+          debugPrint(
+            '[InvoiceService] Using ARS endpoint from Firestore: $url',
+          );
+          return url;
+        }
+
+        if (erpEndpoints.containsKey('ars_alt')) {
+          final endpoint = erpEndpoints['ars_alt'] as String;
+          final url = _buildFullUrl(baseERPUrl, endpoint);
+          debugPrint(
+            '[InvoiceService] Using ARS_ALT endpoint from Firestore: $url',
+          );
+          return url;
+        }
+
+        if (erpEndpoints.containsKey('invoices')) {
+          final endpoint = erpEndpoints['invoices'] as String;
+          final url = _buildFullUrl(baseERPUrl, endpoint);
+          debugPrint(
+            '[InvoiceService] Using INVOICES endpoint from Firestore: $url',
+          );
+          return url;
+        }
+
+        // Usar el primer endpoint disponible
+        if (erpEndpoints.isNotEmpty) {
+          final firstKey = erpEndpoints.keys.first;
+          final endpoint = erpEndpoints[firstKey] as String;
+          final url = _buildFullUrl(baseERPUrl, endpoint);
+          debugPrint(
+            '[InvoiceService] Using first available endpoint from Firestore ($firstKey): $url',
+          );
+          return url;
+        }
+      }
+
+      return null;
+    } catch (e) {
+      debugPrint('[InvoiceService] Error getting configured endpoint URL: $e');
+      return null;
+    }
+  }
+
+  // Helper para construir URL completa
+  String _buildFullUrl(String baseUrl, String endpoint) {
+    final base = baseUrl.endsWith('/')
+        ? baseUrl.substring(0, baseUrl.length - 1)
+        : baseUrl;
+    final path = endpoint.startsWith('/') ? endpoint : '/$endpoint';
+    return '$base$path';
+  }
+
+  // Obtiene los endpoints configurados del ERP (sistema legacy)
   Future<List<ERPEndpoint>> _getConfiguredEndpoints() async {
     try {
       final uid = _auth.currentUser?.uid;
@@ -122,7 +406,190 @@ class InvoiceService {
     }
   }
 
-  // Realiza la llamada HTTP al ERP
+  // Realiza llamadas HTTP a múltiples endpoints y combina los resultados
+  Future<List<ERPInvoice>> _fetchAndCombineFromMultipleEndpoints(
+    List<String> endpointUrls,
+    InvoiceCategory category,
+  ) async {
+    debugPrint('');
+    debugPrint('🔗 ===== COMBINANDO MÚLTIPLES ENDPOINTS =====');
+    debugPrint('🔗 Total endpoints a llamar: ${endpointUrls.length}');
+    for (int i = 0; i < endpointUrls.length; i++) {
+      debugPrint('🔗 Endpoint ${i + 1}: ${endpointUrls[i]}');
+    }
+    debugPrint('🔗 ==========================================');
+    debugPrint('');
+
+    final List<ERPInvoice> allInvoices = [];
+    final List<String> successfulEndpoints = [];
+    final List<String> failedEndpoints = [];
+
+    // Hacer llamadas a todos los endpoints en paralelo
+    final futures = endpointUrls.map((url) => _fetchFromSingleEndpoint(url));
+    final results = await Future.wait(futures, eagerError: false);
+
+    // Procesar resultados
+    for (int i = 0; i < endpointUrls.length; i++) {
+      final url = endpointUrls[i];
+      final result = results[i];
+
+      debugPrint('');
+      debugPrint('🔍 PROCESANDO RESULTADO ${i + 1}/${endpointUrls.length}');
+      debugPrint('🔍 URL: $url');
+
+      if (result != null && result.isNotEmpty) {
+        // Analizar tipos de tab antes de agregar
+        final tabTypes = <String, int>{};
+        for (final invoice in result) {
+          final tabType = invoice.tipoTabEnvioFactura;
+          if (tabType != null) {
+            tabTypes[tabType] = (tabTypes[tabType] ?? 0) + 1;
+          }
+        }
+
+        allInvoices.addAll(result);
+        successfulEndpoints.add(url);
+
+        debugPrint('✅ ÉXITO - Facturas obtenidas: ${result.length}');
+        debugPrint('✅ Tipos de tab encontrados:');
+        for (final entry in tabTypes.entries) {
+          debugPrint('   • ${entry.key}: ${entry.value}');
+        }
+        debugPrint('✅ Total acumulado hasta ahora: ${allInvoices.length}');
+      } else {
+        failedEndpoints.add(url);
+        debugPrint('❌ ERROR - No se obtuvieron datos');
+        if (result == null) {
+          debugPrint('❌ Resultado es null (excepción en la llamada)');
+        } else {
+          debugPrint('❌ Resultado es lista vacía');
+        }
+      }
+    }
+
+    debugPrint('');
+    debugPrint('🎯 ===== RESUMEN FINAL DE COMBINACIÓN =====');
+    debugPrint('🎯 Total facturas combinadas: ${allInvoices.length}');
+    debugPrint(
+      '🎯 Endpoints exitosos: ${successfulEndpoints.length}/${endpointUrls.length}',
+    );
+    debugPrint('🎯 Endpoints fallidos: ${failedEndpoints.length}');
+
+    // Análisis de tipos de tab en el resultado combinado
+    final combinedTabTypes = <String, int>{};
+    for (final invoice in allInvoices) {
+      final tabType = invoice.tipoTabEnvioFactura;
+      if (tabType != null) {
+        combinedTabTypes[tabType] = (combinedTabTypes[tabType] ?? 0) + 1;
+      }
+    }
+
+    debugPrint('🎯 Tipos de tab en resultado combinado:');
+    for (final entry in combinedTabTypes.entries) {
+      debugPrint('   • ${entry.key}: ${entry.value}');
+    }
+    debugPrint('🎯 ========================================');
+    debugPrint('');
+
+    // Si no se obtuvo ningún dato, lanzar error
+    if (allInvoices.isEmpty) {
+      if (failedEndpoints.length == endpointUrls.length) {
+        throw ERPConnectionException(
+          'No se pudo conectar a ninguno de los ${endpointUrls.length} endpoints configurados',
+        );
+      } else {
+        throw NoInvoicesFoundException(
+          'No se encontraron facturas en ninguno de los endpoints',
+        );
+      }
+    }
+
+    // Eliminar duplicados basados en ENCF
+    final uniqueInvoices = _removeDuplicateInvoices(allInvoices);
+    debugPrint(
+      '[InvoiceService] After removing duplicates: ${uniqueInvoices.length} invoices',
+    );
+
+    // Debug final de tipos de tab después de eliminar duplicados
+    final finalTabTypes = <String, int>{};
+    for (final invoice in uniqueInvoices) {
+      final tabType = invoice.tipoTabEnvioFactura;
+      if (tabType != null) {
+        finalTabTypes[tabType] = (finalTabTypes[tabType] ?? 0) + 1;
+      }
+    }
+
+    debugPrint('');
+    debugPrint('🏁 RESULTADO FINAL DESPUÉS DE ELIMINAR DUPLICADOS:');
+    debugPrint('🏁 Total facturas únicas: ${uniqueInvoices.length}');
+    debugPrint('🏁 Tipos de tab finales:');
+    for (final entry in finalTabTypes.entries) {
+      debugPrint('   • ${entry.key}: ${entry.value}');
+    }
+    debugPrint('');
+
+    return uniqueInvoices;
+  }
+
+  // Realiza llamada HTTP a un solo endpoint (con manejo de errores)
+  Future<List<ERPInvoice>?> _fetchFromSingleEndpoint(String erpUrl) async {
+    debugPrint('');
+    debugPrint('📡 LLAMANDO A ENDPOINT INDIVIDUAL: $erpUrl');
+
+    try {
+      final result = await _fetchFromERP(erpUrl, InvoiceCategory.todos);
+
+      debugPrint('📡 ✅ Endpoint respondió con ${result.length} facturas');
+
+      // Debug de tipos de tab en este endpoint
+      final tabTypes = <String, int>{};
+      for (final invoice in result) {
+        final tabType = invoice.tipoTabEnvioFactura;
+        if (tabType != null) {
+          tabTypes[tabType] = (tabTypes[tabType] ?? 0) + 1;
+        }
+      }
+
+      if (tabTypes.isNotEmpty) {
+        debugPrint('📡 ✅ Tipos de tab en este endpoint:');
+        for (final entry in tabTypes.entries) {
+          debugPrint('     • ${entry.key}: ${entry.value}');
+        }
+      } else {
+        debugPrint('📡 ⚠️ No se encontraron tipos de tab en este endpoint');
+      }
+
+      return result;
+    } catch (e) {
+      debugPrint('📡 ❌ Error fetching from $erpUrl: $e');
+      return null;
+    }
+  }
+
+  // Elimina facturas duplicadas basándose en el ENCF
+  List<ERPInvoice> _removeDuplicateInvoices(List<ERPInvoice> invoices) {
+    final Map<String, ERPInvoice> uniqueInvoices = {};
+
+    for (final invoice in invoices) {
+      final key = invoice.encf ?? 'no_encf_${invoice.hashCode}';
+
+      // Si ya existe, mantener el que tenga más información
+      if (uniqueInvoices.containsKey(key)) {
+        final existing = uniqueInvoices[key]!;
+        // Priorizar el que tenga tipoTabEnvioFactura
+        if (invoice.tipoTabEnvioFactura != null &&
+            existing.tipoTabEnvioFactura == null) {
+          uniqueInvoices[key] = invoice;
+        }
+      } else {
+        uniqueInvoices[key] = invoice;
+      }
+    }
+
+    return uniqueInvoices.values.toList();
+  }
+
+  // Realiza la llamada HTTP al ERP (método original)
   Future<List<ERPInvoice>> _fetchFromERP(
     String erpUrl,
     InvoiceCategory category,

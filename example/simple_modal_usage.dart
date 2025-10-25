@@ -100,7 +100,7 @@ class SimpleModalUsageExample extends StatelessWidget {
                 ),
               ),
             )
-            .toList(),
+            ,
       ],
     );
   }
@@ -170,7 +170,7 @@ class SimpleModalUsageExample extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceVariant,
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(

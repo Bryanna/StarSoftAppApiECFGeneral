@@ -30,7 +30,7 @@ class DynamicTabsService {
     '47': '💳',
   };
 
-  /// Analiza una lista de facturas y genera tabs dinámicos basados en los tipos de ENCF encontrados
+  /// Analiza una lista de facturas y genera tabs dinámicos basados en los tipos de ENCF y tipo_tab_envio_factura
   static List<DynamicTab> generateTabsFromInvoices(List<ERPInvoice> invoices) {
     if (invoices.isEmpty) {
       return _getDefaultTabs();
@@ -38,18 +38,32 @@ class DynamicTabsService {
 
     // Extraer tipos únicos de ENCF de los datos
     final Set<String> encfTypes = {};
-    final Map<String, int> typeCounts = {};
+    final Map<String, int> encfTypeCounts = {};
+
+    // Extraer tipos únicos de tipo_tab_envio_factura
+    final Set<String> tabTypes = {};
+    final Map<String, int> tabTypeCounts = {};
 
     for (final invoice in invoices) {
+      // Procesar tipos ENCF (lógica existente)
       String? encfType = _extractEncfType(invoice);
       if (encfType != null && encfType.isNotEmpty) {
         encfTypes.add(encfType);
-        typeCounts[encfType] = (typeCounts[encfType] ?? 0) + 1;
+        encfTypeCounts[encfType] = (encfTypeCounts[encfType] ?? 0) + 1;
+      }
+
+      // Procesar tipo_tab_envio_factura (nueva lógica)
+      String? tabType = _extractTabType(invoice);
+      if (tabType != null && tabType.isNotEmpty) {
+        tabTypes.add(tabType);
+        tabTypeCounts[tabType] = (tabTypeCounts[tabType] ?? 0) + 1;
       }
     }
 
     debugPrint('[DynamicTabsService] Tipos ENCF encontrados: $encfTypes');
-    debugPrint('[DynamicTabsService] Conteos por tipo: $typeCounts');
+    debugPrint('[DynamicTabsService] Conteos ENCF por tipo: $encfTypeCounts');
+    debugPrint('[DynamicTabsService] Tipos Tab encontrados: $tabTypes');
+    debugPrint('[DynamicTabsService] Conteos Tab por tipo: $tabTypeCounts');
 
     // Generar tabs dinámicos
     final List<DynamicTab> dynamicTabs = [];
@@ -63,25 +77,48 @@ class DynamicTabsService {
         category: InvoiceCategory.todos,
         count: invoices.length,
         encfType: null,
+        tabType: null,
       ),
     );
 
-    // Agregar tabs por cada tipo de ENCF encontrado
-    for (final encfType in encfTypes.toList()..sort()) {
-      final label = _encfTypeLabels[encfType] ?? 'Tipo $encfType';
-      final icon = _encfTypeIcons[encfType] ?? '📄';
-      final count = typeCounts[encfType] ?? 0;
+    // Agregar tabs por cada tipo de tab_envio_factura encontrado (PRIORIDAD)
+    for (final tabType in tabTypes.toList()..sort()) {
+      final label = formatTabTypeLabel(tabType);
+      final icon = getTabTypeIcon(tabType);
+      final count = tabTypeCounts[tabType] ?? 0;
 
       dynamicTabs.add(
         DynamicTab(
-          id: 'encf_$encfType',
+          id: 'tab_$tabType',
           label: label,
           icon: icon,
-          category: _mapEncfTypeToCategory(encfType),
+          category: _mapTabTypeToCategory(tabType),
           count: count,
-          encfType: encfType,
+          encfType: null,
+          tabType: tabType,
         ),
       );
+    }
+
+    // Agregar tabs por cada tipo de ENCF encontrado (solo si no hay tabs de tipo)
+    if (tabTypes.isEmpty) {
+      for (final encfType in encfTypes.toList()..sort()) {
+        final label = _encfTypeLabels[encfType] ?? 'Tipo $encfType';
+        final icon = _encfTypeIcons[encfType] ?? '📄';
+        final count = encfTypeCounts[encfType] ?? 0;
+
+        dynamicTabs.add(
+          DynamicTab(
+            id: 'encf_$encfType',
+            label: label,
+            icon: icon,
+            category: _mapEncfTypeToCategory(encfType),
+            count: count,
+            encfType: encfType,
+            tabType: null,
+          ),
+        );
+      }
     }
 
     // Agregar tabs de estado si hay facturas con estados específicos
@@ -97,6 +134,7 @@ class DynamicTabsService {
           category: InvoiceCategory.enviados,
           count: enviados,
           encfType: null,
+          tabType: null,
         ),
       );
     }
@@ -110,6 +148,7 @@ class DynamicTabsService {
           category: InvoiceCategory.rechazados,
           count: rechazados,
           encfType: null,
+          tabType: null,
         ),
       );
     }
@@ -140,6 +179,81 @@ class DynamicTabsService {
     return null;
   }
 
+  /// Extrae el tipo de tab de una factura desde tipoTabEnvioFactura
+  static String? _extractTabType(ERPInvoice invoice) {
+    if (invoice.tipoTabEnvioFactura != null &&
+        invoice.tipoTabEnvioFactura!.isNotEmpty) {
+      return invoice.tipoTabEnvioFactura!;
+    }
+    return null;
+  }
+
+  /// Convierte un tipo de tab en un label legible dividiendo por mayúsculas
+  /// Ejemplo: "FacturaArs" -> "Factura Ars"
+  static String formatTabTypeLabel(String tabType) {
+    if (tabType.isEmpty) return tabType;
+
+    // Dividir por mayúsculas
+    final RegExp regExp = RegExp(r'(?=[A-Z])');
+    final parts = tabType
+        .split(regExp)
+        .where((part) => part.isNotEmpty)
+        .toList();
+
+    // Capitalizar la primera letra de cada parte
+    final formattedParts = parts.map((part) {
+      if (part.isEmpty) return part;
+      return part[0].toUpperCase() + part.substring(1).toLowerCase();
+    }).toList();
+
+    return formattedParts.join(' ');
+  }
+
+  /// Obtiene un icono apropiado para el tipo de tab
+  static String getTabTypeIcon(String tabType) {
+    final lowerType = tabType.toLowerCase();
+
+    if (lowerType.contains('factura')) {
+      if (lowerType.contains('ars')) return '🏥'; // ARS (salud)
+      if (lowerType.contains('credito')) return '💳';
+      if (lowerType.contains('consumo')) return '🛒';
+      return '📄';
+    }
+
+    if (lowerType.contains('nota')) {
+      if (lowerType.contains('credito')) return '📉';
+      if (lowerType.contains('debito')) return '📈';
+      return '📝';
+    }
+
+    if (lowerType.contains('compra')) return '🏪';
+    if (lowerType.contains('gasto')) return '💸';
+    if (lowerType.contains('pago')) return '💰';
+    if (lowerType.contains('export')) return '🌍';
+
+    return '📋'; // Icono por defecto
+  }
+
+  /// Mapea un tipo de tab a una categoría de factura
+  static InvoiceCategory _mapTabTypeToCategory(String tabType) {
+    final lowerType = tabType.toLowerCase();
+
+    if (lowerType.contains('factura')) {
+      if (lowerType.contains('ars')) return InvoiceCategory.pacientes;
+      return InvoiceCategory.todos;
+    }
+
+    if (lowerType.contains('nota')) {
+      if (lowerType.contains('credito')) return InvoiceCategory.notasCredito;
+      if (lowerType.contains('debito')) return InvoiceCategory.notasDebito;
+      return InvoiceCategory.todos;
+    }
+
+    if (lowerType.contains('gasto')) return InvoiceCategory.gastos;
+
+    return InvoiceCategory.todos;
+  }
+
   /// Mapea un tipo de ENCF a una categoría de factura
   static InvoiceCategory _mapEncfTypeToCategory(String encfType) {
     switch (encfType) {
@@ -160,12 +274,24 @@ class DynamicTabsService {
 
   /// Determina si una factura está enviada
   static bool _isEnviado(ERPInvoice invoice) {
+    // Priorizar el estado del endpoint si está disponible
+    final code = invoice.estadoCode;
+    if (code != null) {
+      return code == 3; // 3 = Enviado
+    }
+    // Fallback a la lógica anterior
     return (invoice.linkOriginal != null && invoice.linkOriginal!.isNotEmpty) ||
         (invoice.fechahorafirma != null && invoice.fechahorafirma!.isNotEmpty);
   }
 
   /// Determina si una factura está rechazada
   static bool _isRechazado(ERPInvoice invoice) {
+    // Priorizar el estado del endpoint si está disponible
+    final code = invoice.estadoCode;
+    if (code != null) {
+      return code == 2; // 2 = Rechazado
+    }
+    // Fallback a la lógica anterior
     return invoice.fAnulada == true;
   }
 
@@ -182,13 +308,22 @@ class DynamicTabsService {
       case 'rechazados':
         return invoices.where((inv) => _isRechazado(inv)).toList();
       default:
-        // Filtrar por tipo de ENCF
+        // Filtrar por tipo de tab (prioridad)
+        if (tab.tabType != null) {
+          return invoices.where((inv) {
+            final tabType = _extractTabType(inv);
+            return tabType == tab.tabType;
+          }).toList();
+        }
+
+        // Filtrar por tipo de ENCF (fallback)
         if (tab.encfType != null) {
           return invoices.where((inv) {
             final encfType = _extractEncfType(inv);
             return encfType == tab.encfType;
           }).toList();
         }
+
         return invoices;
     }
   }
@@ -203,6 +338,7 @@ class DynamicTabsService {
         category: InvoiceCategory.todos,
         count: 0,
         encfType: null,
+        tabType: null,
       ),
     ];
   }
@@ -216,6 +352,7 @@ class DynamicTab {
   final InvoiceCategory category;
   final int count;
   final String? encfType;
+  final String? tabType; // Nuevo campo para tipo_tab_envio_factura
 
   const DynamicTab({
     required this.id,
@@ -224,11 +361,12 @@ class DynamicTab {
     required this.category,
     required this.count,
     this.encfType,
+    this.tabType,
   });
 
   @override
   String toString() {
-    return 'DynamicTab(id: $id, label: $label, count: $count, encfType: $encfType)';
+    return 'DynamicTab(id: $id, label: $label, count: $count, encfType: $encfType, tabType: $tabType)';
   }
 
   @override
