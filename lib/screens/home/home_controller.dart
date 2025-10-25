@@ -19,6 +19,7 @@ import '../../services/fake_data_service.dart';
 import '../../services/invoice_service.dart';
 import '../../services/pdf_viewer_service.dart';
 import '../../services/queue_processor_service.dart';
+import '../../services/ars_header_pdf_service.dart';
 import '../../widgets/enhanced_invoice_preview.dart';
 import '../../widgets/simple_invoice_modal.dart';
 
@@ -472,6 +473,29 @@ class HomeController extends GetxController {
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
+      );
+    }
+  }
+
+  Future<void> previewArsHeader(ERPInvoice invoice) async {
+    try {
+      // Generar PDF de encabezado ARS únicamente
+      final bytes = await ArsHeaderPdfService.buildHeaderPdf(
+        PdfPageFormat.a4,
+        invoice,
+      );
+
+      // Mostrar vista previa rápida con opción de ver completo
+      PdfViewerService.showQuickPreview(
+        context: Get.context!,
+        pdfBytes: bytes,
+        title: 'Encabezado ARS - ${invoice.numeroFactura}',
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'No se pudo generar el encabezado ARS: $e',
+        snackPosition: SnackPosition.BOTTOM,
       );
     }
   }

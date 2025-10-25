@@ -17,6 +17,7 @@ class InvoiceTable extends StatelessWidget {
   final InvoiceCallback onView;
   final InvoiceCallback onSend;
   final InvoiceCallback? onPreview;
+  final InvoiceCallback? onPreviewArsHeader;
   final SelectionCallback? onToggleSelection;
   final SelectAllCallback? onToggleSelectAll;
   final IsSelectedCallback? isSelected;
@@ -28,6 +29,7 @@ class InvoiceTable extends StatelessWidget {
     required this.onView,
     required this.onSend,
     this.onPreview,
+    this.onPreviewArsHeader,
     this.onToggleSelection,
     this.onToggleSelectAll,
     this.isSelected,
@@ -317,6 +319,28 @@ class InvoiceTable extends StatelessWidget {
     );
   }
 
+  bool _isArsInvoice(ERPInvoice invoice) {
+    // 1) Detección directa por TipoTabEnvioFactura (más confiable en vistas dinámicas)
+    final tabType = invoice.tipoTabEnvioFactura?.toLowerCase();
+    if (tabType != null && tabType.contains('ars')) return true;
+
+    // 2) Heurística por ENCF/tipoecf como fallback (compatibilidad)
+    final encf = (invoice.encf ?? '').toUpperCase();
+    if (encf.length >= 3) {
+      final prefix = encf.substring(0, 3);
+      if (['E41', 'B11', 'C11', 'P11'].contains(prefix)) return true;
+    }
+    final tipo = (invoice.tipoecf ?? '').toUpperCase();
+    if (tipo.isNotEmpty) {
+      if (RegExp(r'^\d+$').hasMatch(tipo)) {
+        final mapped = 'B${tipo.padLeft(2, '0')}';
+        return ['E41', 'B11', 'C11', 'P11'].contains(mapped);
+      }
+      return ['E41', 'B11', 'C11', 'P11'].contains(tipo);
+    }
+    return false;
+  }
+
   Widget _actionsMenu(ERPInvoice invoice) {
     Widget btn(
       IconData icon,
@@ -358,6 +382,15 @@ class InvoiceTable extends StatelessWidget {
             'Vista previa',
             const Color(0xFF28a745),
             () => onPreview!(invoice),
+          ),
+        ],
+        if (onPreviewArsHeader != null && _isArsInvoice(invoice)) ...[
+          const SizedBox(width: 8),
+          btn(
+            FontAwesomeIcons.idBadge,
+            'Encabezado ARS',
+            const Color(0xFF6f42c1),
+            () => onPreviewArsHeader!(invoice),
           ),
         ],
       ],

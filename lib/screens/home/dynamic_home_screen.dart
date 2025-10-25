@@ -12,6 +12,7 @@ import '../../widgets/dynamic_data_table.dart';
 import '../../widgets/dynamic_tabs_bar.dart';
 import '../../widgets/enhanced_invoice_preview.dart';
 import '../../widgets/simple_invoice_modal.dart';
+import 'home_controller.dart';
 
 /// Versión dinámica del HomeScreen que genera tabs basados en los tipos de ENCF encontrados
 class DynamicHomeScreen extends StatelessWidget {
@@ -143,6 +144,7 @@ class DynamicHomeScreen extends StatelessWidget {
                         onView: _viewDetails,
                         onSend: _sendInvoice,
                         onPreview: _previewInvoice,
+                        onPreviewArsHeader: _previewArsHeader,
                       ),
                     ),
                   ],
@@ -170,6 +172,19 @@ class DynamicHomeScreen extends StatelessWidget {
 
   void _previewInvoice(ERPInvoice invoice) {
     showEnhancedInvoicePreview(context: Get.context!, invoice: invoice);
+  }
+
+  void _previewArsHeader(ERPInvoice invoice) {
+    try {
+      final hc = Get.find<HomeController>();
+      hc.previewArsHeader(invoice);
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'No se pudo abrir el encabezado ARS',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
   }
 }
 
