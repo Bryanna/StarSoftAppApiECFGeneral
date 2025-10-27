@@ -744,28 +744,24 @@ class QueueProcessorService {
 
   // Extraer TipoeCF del NCF del ERP
   String _extractTipoeCF(Map<String, dynamic> invoiceData) {
-    // Intentar obtener el NCF del ERP
+    // Priorizar el tipoecf provisto por el ERP si existe
+    final providedTipo = (invoiceData['tipoecf'] ?? invoiceData['TipoeCF'] ?? '')
+        .toString()
+        .trim();
+    if (providedTipo.isNotEmpty) {
+      debugPrint('[QueueProcessor] 📋 TipoeCF provisto por ERP: $providedTipo');
+      return providedTipo;
+    }
+
+    // Intentar inferir desde ENCF si es electrónico (E31/E32)
     final numeroFactura =
         invoiceData['numeroFactura'] ??
         invoiceData['encf'] ??
         invoiceData['NumeroFacturaInterna'] ??
         '';
 
-    debugPrint('[QueueProcessor] 🔍 NCF del ERP: $numeroFactura');
+    debugPrint('[QueueProcessor] 🔍 NCF/ENCF del ERP: $numeroFactura');
 
-    // Si empieza con B01, usar tipo 31
-    if (numeroFactura.toString().startsWith('B01')) {
-      debugPrint('[QueueProcessor] 📋 B01 detectado → TipoeCF: 31');
-      return '31';
-    }
-
-    // Si empieza con B02, usar tipo 32
-    if (numeroFactura.toString().startsWith('B02')) {
-      debugPrint('[QueueProcessor] 📋 B02 detectado → TipoeCF: 32');
-      return '32';
-    }
-
-    // Si ya es E31 o E32, mantener
     if (numeroFactura.toString().startsWith('E31')) {
       debugPrint('[QueueProcessor] 📋 E31 detectado → TipoeCF: 31');
       return '31';
@@ -776,83 +772,23 @@ class QueueProcessorService {
       return '32';
     }
 
-    // Por defecto usar 32 (Factura de Consumo)
-    debugPrint(
-      '[QueueProcessor] 📋 NCF no reconocido → TipoeCF por defecto: 32',
-    );
-    return '32';
+    // Si no es electrónico y no se proporciona, no forzar conversión
+    debugPrint('[QueueProcessor] 📋 TipoeCF no disponible, sin conversión forzada');
+    return '';
   }
 
   // Generar ENCF único basado en NCF del ERP
   String _generateUniqueENCF(Map<String, dynamic> invoiceData) {
+    // Tomar ENCF directamente del ERP si existe, sin conversión
     final numeroFactura =
-        invoiceData['numeroFactura'] ??
         invoiceData['encf'] ??
+        invoiceData['numeroFactura'] ??
         invoiceData['NumeroFacturaInterna'] ??
         '';
 
-    debugPrint('[QueueProcessor] 🔍 Generando ENCF desde: $numeroFactura');
-
-    String ncfString = numeroFactura.toString();
-
-    // Si empieza con B01, reemplazar por E31 y asegurar 13 caracteres
-    if (ncfString.startsWith('B01')) {
-      final numberPart = ncfString.substring(3); // Quitar B01
-      final paddedNumber = numberPart.padLeft(
-        10,
-        '0',
-      ); // Completar con ceros a 10 dígitos
-      final newEncf = 'E31$paddedNumber';
-      debugPrint(
-        '[QueueProcessor] 🔄 B01 → E31: $newEncf (${newEncf.length} chars)',
-      );
-      return newEncf;
-    }
-
-    // Si empieza con B02, reemplazar por E32 y asegurar 13 caracteres
-    if (ncfString.startsWith('B02')) {
-      final numberPart = ncfString.substring(3); // Quitar B02
-      final paddedNumber = numberPart.padLeft(
-        10,
-        '0',
-      ); // Completar con ceros a 10 dígitos
-      final newEncf = 'E32$paddedNumber';
-      debugPrint(
-        '[QueueProcessor] 🔄 B02 → E32: $newEncf (${newEncf.length} chars)',
-      );
-      return newEncf;
-    }
-
-    // Si ya es E31 o E32, verificar longitud y ajustar si es necesario
-    if (ncfString.startsWith('E31') || ncfString.startsWith('E32')) {
-      if (ncfString.length == 13) {
-        debugPrint('[QueueProcessor] ✅ ENCF ya válido: $ncfString');
-        return ncfString;
-      } else {
-        // Ajustar longitud
-        final prefix = ncfString.substring(0, 3); // E31 o E32
-        final numberPart = ncfString.substring(3);
-        final paddedNumber = numberPart.padLeft(10, '0');
-        final adjustedEncf = '$prefix$paddedNumber';
-        debugPrint(
-          '[QueueProcessor] 🔧 ENCF ajustado: $adjustedEncf (${adjustedEncf.length} chars)',
-        );
-        return adjustedEncf;
-      }
-    }
-
-    // Si no tiene formato reconocido, generar uno único con 13 caracteres
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final uniqueNumber = timestamp
-        .toString()
-        .substring(timestamp.toString().length - 10)
-        .padLeft(10, '0');
-    final fallbackEncf = 'E32$uniqueNumber';
-
-    debugPrint(
-      '[QueueProcessor] 🆕 ENCF generado: $fallbackEncf (${fallbackEncf.length} chars)',
-    );
-    return fallbackEncf;
+    final ncfString = numeroFactura.toString();
+    debugPrint('[QueueProcessor] 🔍 ENCF tomado del ERP: $ncfString');
+    return ncfString;
   }
 
   // Formatear fecha para DGII (dd-MM-yyyy)

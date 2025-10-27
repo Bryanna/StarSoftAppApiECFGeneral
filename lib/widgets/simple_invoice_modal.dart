@@ -467,7 +467,7 @@ class _SimpleInvoiceModalState extends State<SimpleInvoiceModal> {
       'TotalITBIS': erp.totalitbis ?? '0.00',
       'MontoExento': erp.montoexento ?? '0.00',
       'CodigoSeguridad': '', // Debe ser llenado por el API de DGII
-      'TipoeCF': erp.tipoecf ?? '31',
+      'TipoeCF': erp.tipoecf ?? '',
 
       // URL para QR Code
       'linkOriginal': erp.linkOriginal ?? '',
