@@ -49,6 +49,7 @@ dependencies:
   cloud_firestore: ^5.4.8
   firebase_storage: ^12.3.4
   file_picker: ^8.1.4
+  calendar_date_picker2: ^2.0.1
 
 dev_dependencies:
   flutter_test:

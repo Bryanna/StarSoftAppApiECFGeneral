@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:typed_data';
+
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
@@ -42,17 +42,22 @@ class ArsDetailPdfService {
     }
 
     // Datos de empresa/factura
-    final razonSocial = (companyConfig?['razonSocial'] as String?) ??
-        invoice.razonsocialemisor ?? 'Nombre de Empresa';
+    final razonSocial =
+        (companyConfig?['razonSocial'] as String?) ??
+        invoice.razonsocialemisor ??
+        'Nombre de Empresa';
     final rnc = (companyConfig?['rnc'] as String?) ?? invoice.rncemisor ?? '';
-    final direccion = (companyConfig?['direccion'] as String?) ??
-        invoice.direccionemisor ?? '';
-    final telefono = (companyConfig?['telefono'] as String?) ??
+    final direccion =
+        (companyConfig?['direccion'] as String?) ??
+        invoice.direccionemisor ??
+        '';
+    final telefono =
+        (companyConfig?['telefono'] as String?) ??
         (invoice.telefonoemisor1 ?? '');
-    final email = (companyConfig?['email'] as String?) ??
-        (invoice.correoemisor ?? '');
-    final website = (companyConfig?['website'] as String?) ??
-        (invoice.website ?? '');
+    final email =
+        (companyConfig?['email'] as String?) ?? (invoice.correoemisor ?? '');
+    final website =
+        (companyConfig?['website'] as String?) ?? (invoice.website ?? '');
 
     final numeroInterno = invoice.numerofacturainterna ?? '';
     final ncf = invoice.encf ?? '';
@@ -60,8 +65,11 @@ class ArsDetailPdfService {
     final fechaVenc = invoice.fechavencimientosecuencia ?? '';
     final condicion = invoice.terminopago ?? 'Condición 30 Días';
 
-    final tipoComprobante = (invoice.tipoComprobante ?? invoice.tipoComprobanteDisplay) ?? 'Factura ARS';
-    final aseguradora = invoice.razonsocialcomprador ?? invoice.aseguradora ?? '';
+    final tipoComprobante =
+        (invoice.tipoComprobante ?? invoice.tipoComprobanteDisplay) ??
+        'Factura ARS';
+    final aseguradora =
+        invoice.razonsocialcomprador ?? invoice.aseguradora ?? '';
 
     // Estilos
     final primary = const PdfColor.fromInt(0xFF005285);
@@ -75,12 +83,9 @@ class ArsDetailPdfService {
       fontWeight: pw.FontWeight.bold,
       color: PdfColors.grey800,
     );
-    final valueStyle = pw.TextStyle(
-      fontSize: 9,
-      color: PdfColors.black,
-    );
+    final valueStyle = pw.TextStyle(fontSize: 9, color: PdfColors.black);
 
-    pw.Widget _labelValue(String label, String value) {
+    pw.Widget labelValue(String label, String value) {
       return pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
@@ -97,7 +102,7 @@ class ArsDetailPdfService {
       );
     }
 
-    String _fmtMoney(num v) => NumberFormat('#,##0.00', 'es_DO').format(v);
+    String fmtMoney(num v) => NumberFormat('#,##0.00', 'es_DO').format(v);
 
     // Parse y agrupación por departamento desde detalle_factura
     final detalleStr = invoice.detalleFactura;
@@ -113,10 +118,8 @@ class ArsDetailPdfService {
               final dept = (raw['departamento'] ?? 'SIN DEPARTAMENTO')
                   .toString()
                   .trim();
-              final cobertura = double.tryParse(
-                    raw['cobertura']?.toString() ?? '0',
-                  ) ??
-                  0.0;
+              final cobertura =
+                  double.tryParse(raw['cobertura']?.toString() ?? '0') ?? 0.0;
               groups.putIfAbsent(dept, () => []);
               groups[dept]!.add(raw);
               totalServicios += 1;
@@ -129,49 +132,92 @@ class ArsDetailPdfService {
       debugPrint('[ArsDetailPdfService] Error parsing detalle_factura: $e');
     }
 
-    List<MapEntry<String, List<Map<String, dynamic>>>> ordered = groups.entries.toList()
-      ..sort((a, b) => a.key.compareTo(b.key));
+    List<MapEntry<String, List<Map<String, dynamic>>>> ordered =
+        groups.entries.toList()..sort((a, b) => a.key.compareTo(b.key));
 
     // Construye widgets de departamento en chunks para evitar TooManyPagesException
-    List<pw.Widget> _buildDepartmentWidgets(String departamento, List<Map<String, dynamic>> items) {
+    List<pw.Widget> buildDepartmentWidgets(
+      String departamento,
+      List<Map<String, dynamic>> items,
+    ) {
       double totalDepto = 0.0;
       for (final it in items) {
-        totalDepto += double.tryParse(it['cobertura']?.toString() ?? '0') ?? 0.0;
+        totalDepto +=
+            double.tryParse(it['cobertura']?.toString() ?? '0') ?? 0.0;
       }
 
-      pw.TableRow _headerRow() {
+      pw.TableRow headerRow() {
         return pw.TableRow(
           decoration: const pw.BoxDecoration(color: PdfColors.blue100),
           children: [
-            pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Autorización', style: labelStyle)),
-            pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Fecha', style: labelStyle)),
-            pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Afiliado', style: labelStyle)),
-            pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Paciente', style: labelStyle)),
-            pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Fact. No.', style: labelStyle)),
-            pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Cobertura', style: labelStyle)),
+            pw.Padding(
+              padding: const pw.EdgeInsets.all(4),
+              child: pw.Text('Autorización', style: labelStyle),
+            ),
+            pw.Padding(
+              padding: const pw.EdgeInsets.all(4),
+              child: pw.Text('Fecha', style: labelStyle),
+            ),
+            pw.Padding(
+              padding: const pw.EdgeInsets.all(4),
+              child: pw.Text('Afiliado', style: labelStyle),
+            ),
+            pw.Padding(
+              padding: const pw.EdgeInsets.all(4),
+              child: pw.Text('Paciente', style: labelStyle),
+            ),
+            pw.Padding(
+              padding: const pw.EdgeInsets.all(4),
+              child: pw.Text('Fact. No.', style: labelStyle),
+            ),
+            pw.Padding(
+              padding: const pw.EdgeInsets.all(4),
+              child: pw.Text('Cobertura', style: labelStyle),
+            ),
           ],
         );
       }
 
-      pw.TableRow _dataRow(Map<String, dynamic> it) {
+      pw.TableRow dataRow(Map<String, dynamic> it) {
         final autorizacion = (it['autorizacion'] ?? '').toString();
         final fecha = (it['fecha_factura'] ?? '').toString();
         final afiliado = (it['paciente'] ?? it['referencia'] ?? '').toString();
         final paciente = (it['descripcion'] ?? '').toString();
-        final factura = (it['factura'] ?? invoice.numerofacturainterna ?? '').toString();
-        final cobertura = double.tryParse(it['cobertura']?.toString() ?? '0') ?? 0.0;
+        final factura = (it['factura_paciente'] ?? '').toString();
+        final cobertura =
+            double.tryParse(it['cobertura']?.toString() ?? '0') ?? 0.0;
         return pw.TableRow(
           children: [
-            pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(autorizacion, style: valueStyle)),
-            pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(fecha, style: valueStyle)),
-            pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(afiliado, style: valueStyle)),
-            pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(paciente, style: valueStyle, maxLines: 1, overflow: pw.TextOverflow.clip)),
-            pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(factura, style: valueStyle)),
+            pw.Padding(
+              padding: const pw.EdgeInsets.all(4),
+              child: pw.Text(autorizacion, style: valueStyle),
+            ),
+            pw.Padding(
+              padding: const pw.EdgeInsets.all(4),
+              child: pw.Text(fecha, style: valueStyle),
+            ),
+            pw.Padding(
+              padding: const pw.EdgeInsets.all(4),
+              child: pw.Text(afiliado, style: valueStyle),
+            ),
+            pw.Padding(
+              padding: const pw.EdgeInsets.all(4),
+              child: pw.Text(
+                paciente,
+                style: valueStyle,
+                maxLines: 1,
+                overflow: pw.TextOverflow.clip,
+              ),
+            ),
+            pw.Padding(
+              padding: const pw.EdgeInsets.all(4),
+              child: pw.Text(factura, style: valueStyle),
+            ),
             pw.Padding(
               padding: const pw.EdgeInsets.all(4),
               child: pw.Align(
                 alignment: pw.Alignment.centerRight,
-                child: pw.Text(_fmtMoney(cobertura), style: valueStyle),
+                child: pw.Text(fmtMoney(cobertura), style: valueStyle),
               ),
             ),
           ],
@@ -205,7 +251,10 @@ class ArsDetailPdfService {
 
       // Crear tablas por chunk
       for (int i = 0; i < items.length; i += rowsPerChunk) {
-        final chunk = items.sublist(i, i + rowsPerChunk > items.length ? items.length : i + rowsPerChunk);
+        final chunk = items.sublist(
+          i,
+          i + rowsPerChunk > items.length ? items.length : i + rowsPerChunk,
+        );
         final isLastChunk = i + rowsPerChunk >= items.length;
         final isFirstChunk = i == 0;
 
@@ -220,8 +269,8 @@ class ArsDetailPdfService {
               5: const pw.FixedColumnWidth(85),
             },
             children: [
-              if (isFirstChunk) _headerRow(),
-              ...chunk.map(_dataRow),
+              if (isFirstChunk) headerRow(),
+              ...chunk.map(dataRow),
               if (isLastChunk)
                 pw.TableRow(
                   children: [
@@ -232,12 +281,20 @@ class ArsDetailPdfService {
                     pw.Container(
                       padding: const pw.EdgeInsets.all(4),
                       alignment: pw.Alignment.centerRight,
-                      child: pw.Text('Total $departamento', style: labelStyle, maxLines: 1, overflow: pw.TextOverflow.clip),
+                      child: pw.Text(
+                        'Total $departamento',
+                        style: labelStyle,
+                        maxLines: 1,
+                        overflow: pw.TextOverflow.clip,
+                      ),
                     ),
                     pw.Container(
                       padding: const pw.EdgeInsets.all(4),
                       alignment: pw.Alignment.centerRight,
-                      child: pw.Text(_fmtMoney(totalDepto), style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                      child: pw.Text(
+                        fmtMoney(totalDepto),
+                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                      ),
                     ),
                   ],
                 ),
@@ -270,7 +327,7 @@ class ArsDetailPdfService {
                   border: pw.Border.all(color: PdfColors.grey300),
                 ),
                 child: logo != null
-                    ? pw.Image(logo!, fit: pw.BoxFit.contain)
+                    ? pw.Image(logo, fit: pw.BoxFit.contain)
                     : pw.Center(
                         child: pw.Text(
                           'LOGO',
@@ -296,15 +353,22 @@ class ArsDetailPdfService {
                     pw.Text('RNC: $rnc', style: pw.TextStyle(fontSize: 7)),
                     pw.Row(
                       children: [
-                        pw.Text('Tel.: ${telefono.isEmpty ? '-' : telefono}',
-                            style: pw.TextStyle(fontSize: 7)),
+                        pw.Text(
+                          'Tel.: ${telefono.isEmpty ? '-' : telefono}',
+                          style: pw.TextStyle(fontSize: 7),
+                        ),
                         pw.SizedBox(width: 8),
-                        pw.Text('E-mail: ${email.isEmpty ? '-' : email}',
-                            style: pw.TextStyle(fontSize: 7)),
+                        pw.Text(
+                          'E-mail: ${email.isEmpty ? '-' : email}',
+                          style: pw.TextStyle(fontSize: 7),
+                        ),
                       ],
                     ),
                     if (website.isNotEmpty)
-                      pw.Text('Web: $website', style: pw.TextStyle(fontSize: 7)),
+                      pw.Text(
+                        'Web: $website',
+                        style: pw.TextStyle(fontSize: 7),
+                      ),
                   ],
                 ),
               ),
@@ -319,11 +383,11 @@ class ArsDetailPdfService {
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    _labelValue('No. Factura', numeroInterno),
-                    _labelValue('NCF', ncf),
-                    _labelValue('Fecha', fechaEmision),
-                    _labelValue('Válido Hasta', fechaVenc),
-                    _labelValue('Condición', condicion),
+                    labelValue('No. Factura', numeroInterno),
+                    labelValue('NCF', ncf),
+                    labelValue('Fecha', fechaEmision),
+                    labelValue('Válido Hasta', fechaVenc),
+                    labelValue('Condición', condicion),
                   ],
                 ),
               ),
@@ -346,19 +410,37 @@ class ArsDetailPdfService {
 
           // Secciones por departamento en chunks para paginación segura
           if (ordered.isNotEmpty)
-            ...ordered.expand((e) => _buildDepartmentWidgets(e.key, e.value)),
+            ...ordered.expand((e) => buildDepartmentWidgets(e.key, e.value)),
 
           // Resumen final (Servicios y Total facturado por ARS)
           pw.SizedBox(height: 10),
           pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
-              pw.Text('${totalServicios} Servicios', style: pw.TextStyle(fontSize: 8)),
-              pw.Row(children: [
-                pw.Text('Total Facturado por ${aseguradora.isNotEmpty ? aseguradora : 'ARS'}: ', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold)),
-                pw.Text(invoice.formattedTotal.isNotEmpty ? invoice.formattedTotal : _fmtMoney(totalCoberturaGlobal),
-                    style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold)),
-              ]),
+              pw.Text(
+                '$totalServicios Servicios',
+                style: pw.TextStyle(fontSize: 8),
+              ),
+              pw.Row(
+                children: [
+                  pw.Text(
+                    'Total Facturado por ${aseguradora.isNotEmpty ? aseguradora : 'ARS'}: ',
+                    style: pw.TextStyle(
+                      fontSize: 8,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                  pw.Text(
+                    invoice.formattedTotal.isNotEmpty
+                        ? invoice.formattedTotal
+                        : fmtMoney(totalCoberturaGlobal),
+                    style: pw.TextStyle(
+                      fontSize: 8,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
 
@@ -391,10 +473,7 @@ class ArsDetailPdfService {
           pw.SizedBox(height: 4),
           pw.Text(
             label,
-            style: pw.TextStyle(
-              fontSize: 9,
-              color: PdfColors.grey700,
-            ),
+            style: pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
           ),
         ],
       ),

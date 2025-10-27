@@ -11,6 +11,7 @@ import '../../services/firebase_auth_service.dart';
 import '../../services/user_service.dart';
 import '../../widgets/invoice_table.dart';
 import 'home_controller.dart';
+import 'package:calendar_date_picker2/calendar_date_picker2.dart';
 
 // Refactor: usamos StatelessWidget con estado manejado por GetX en HomeController
 class HomeScreen extends StatelessWidget {
@@ -405,16 +406,13 @@ class HomeScreen extends StatelessWidget {
         onView: controller.viewDetails,
         onSend: controller.sendInvoice,
         onPreview: controller.previewInvoice,
-        onPreviewArsHeader: controller.currentCategory == InvoiceCategory.ars
-            ? controller.previewArsHeader
-            : null,
-        onPreviewArsDetail: controller.currentCategory == InvoiceCategory.ars
-            ? controller.previewArsDetail
-            : null,
+        onPreviewArsHeader: controller.previewArsHeader,
+        onPreviewArsDetail: controller.previewArsDetail,
         onToggleSelection: controller.toggleSelection,
         onToggleSelectAll: controller.toggleSelectAll,
         isSelected: controller.isSelected,
         isAllSelected: controller.isAllSelected,
+        isArsTab: controller.currentCategory == InvoiceCategory.ars,
       ),
     );
   }
@@ -1106,23 +1104,68 @@ class _DateRangeSelector extends StatelessWidget {
     BuildContext context,
     HomeController controller,
   ) async {
-    final DateTimeRange? picked = await showDateRangePicker(
+    final initialStart = controller.startDate;
+    final initialEnd = controller.endDate;
+
+    final DateTimeRange? picked = await showDialog<DateTimeRange>(
       context: context,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-      initialDateRange:
-          controller.startDate != null && controller.endDate != null
-          ? DateTimeRange(
-              start: controller.startDate!,
-              end: controller.endDate!,
-            )
-          : null,
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(
-            context,
-          ).copyWith(colorScheme: Theme.of(context).colorScheme),
-          child: child!,
+      barrierDismissible: false,
+      builder: (ctx) {
+        List<DateTime?> selected = [initialStart, initialEnd];
+        return Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: StatefulBuilder(
+                builder: (context, setState) {
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          const Text('Seleccionar rango de fechas', style: TextStyle(fontWeight: FontWeight.w600)),
+                          const Spacer(),
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            onPressed: () => Navigator.of(ctx).pop(),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      CalendarDatePicker2(
+                        config: CalendarDatePicker2Config(
+                          calendarType: CalendarDatePicker2Type.range,
+                        ),
+                        value: selected,
+                        onValueChanged: (vals) => setState(() => selected = vals),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: selected.where((d) => d != null).length >= 2
+                                  ? () {
+                                      final nonNull = selected.where((d) => d != null).toList();
+                                      final start = nonNull.first!;
+                                      final end = nonNull.last!;
+                                      Navigator.of(ctx).pop(DateTimeRange(start: start, end: end));
+                                    }
+                                  : null,
+                              icon: const Icon(Icons.check),
+                              label: const Text('Aplicar'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
         );
       },
     );

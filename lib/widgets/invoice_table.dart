@@ -14,7 +14,7 @@ typedef IsSelectedCallback = bool Function(String? encf);
 
 class InvoiceTable extends StatelessWidget {
   final List<ERPInvoice> invoices;
-  final InvoiceCallback onView;
+  final InvoiceCallback? onView;
   final InvoiceCallback onSend;
   final InvoiceCallback? onPreview;
   final InvoiceCallback? onPreviewArsHeader;
@@ -23,7 +23,8 @@ class InvoiceTable extends StatelessWidget {
   final SelectAllCallback? onToggleSelectAll;
   final IsSelectedCallback? isSelected;
   final bool? isAllSelected;
-
+  final bool isArsTab;
+  
   const InvoiceTable({
     super.key,
     required this.invoices,
@@ -36,6 +37,7 @@ class InvoiceTable extends StatelessWidget {
     this.onToggleSelectAll,
     this.isSelected,
     this.isAllSelected,
+    this.isArsTab = false,
   });
 
   @override
@@ -192,9 +194,7 @@ class InvoiceTable extends StatelessWidget {
                             bodyCell(Text(_getRazonSocialComprador(inv))),
                             bodyCell(Text(_formatMonto(_getMontoTotal(inv)))),
                             bodyCell(Text(_getFechaEmision(inv))),
-                            bodyCell(
-                              _typeChip(context, inv),
-                            ),
+                            bodyCell(_typeCell(context, inv)),
                             bodyCell(StatusChip(status: _statusFrom(inv))),
                             bodyCell(_actionsMenu(inv)),
                           ],
@@ -294,8 +294,6 @@ class InvoiceTable extends StatelessWidget {
     return inv.formattedFechaEmision;
   }
 
-
-
   Widget _typeChip(BuildContext context, ERPInvoice invoice) {
     final colors = invoice.tipoComprobanteColors;
     final alias = invoice.tipoComprobanteDisplay;
@@ -321,39 +319,63 @@ class InvoiceTable extends StatelessWidget {
     );
   }
 
+  // Badge extra para distinguir ARS vs Paciente en el tab TODOS
+  Widget _arsPacienteBadge(ERPInvoice invoice) {
+    final isArs = _isArsInvoice(invoice);
+    final isPaciente = _isPacienteInvoice(invoice);
+    if (!isArs && !isPaciente) return const SizedBox.shrink();
+
+    final label = isArs ? 'ARS' : 'Paciente';
+    final bg = isArs ? const Color(0xFFEDE7F6) : const Color(0xFFE0F7FA);
+    final border = isArs ? const Color(0xFF6f42c1) : const Color(0xFF0072CE);
+    final text = isArs ? const Color(0xFF6f42c1) : const Color(0xFF005285);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: border, width: 1),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: text,
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  // Componente combinado para la columna Tipo
+  Widget _typeCell(BuildContext context, ERPInvoice invoice) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(child: _typeChip(context, invoice)),
+        const SizedBox(width: 6),
+        _arsPacienteBadge(invoice),
+      ],
+    );
+  }
+
   bool _isArsInvoice(ERPInvoice invoice) {
-    // 1) Detección directa por TipoTabEnvioFactura (más confiable en vistas dinámicas)
-    final tabType = invoice.tipoTabEnvioFactura?.toLowerCase();
-    if (tabType != null && tabType.contains('ars')) return true;
+    // Usar exclusivamente el campo del endpoint
+    final raw = invoice.tipoTabEnvioFactura?.trim();
+    if (raw == null || raw.isEmpty) return false;
+    final lower = raw.toLowerCase().replaceAll(' ', '');
+    return lower == 'facturaars';
+  }
 
-    // 2) Señales médicas/ARS en la propia factura
-    final aseguradora = (invoice.aseguradora ?? '').trim();
-    final tipoTitulo = (invoice.tipoFacturaTitulo ?? '').toLowerCase();
-    final autorizacion = (invoice.noAutorizacion ?? '').trim();
-    final nss = (invoice.nss ?? '').trim();
-    final medico = (invoice.medico ?? '').trim();
 
-    if (aseguradora.isNotEmpty) return true;
-    if (tipoTitulo.contains('ars')) return true;
-    if (autorizacion.isNotEmpty && nss.isNotEmpty) return true; // suele venir en ARS
-    if (medico.isNotEmpty && (aseguradora.isNotEmpty || autorizacion.isNotEmpty)) return true;
+  // Detección de Paciente usando exclusivamente el campo del endpoint
+  bool _isPacienteInvoice(ERPInvoice invoice) {
 
-    // 3) Heurística por ENCF/tipoecf como fallback (compatibilidad)
-    final encf = (invoice.encf ?? '').toUpperCase();
-    if (encf.length >= 3) {
-      final prefix = encf.substring(0, 3);
-      // Mantener compatibilidad con mapeos existentes si aplican
-      if (["E41", "B11", "C11", "P11"].contains(prefix)) return true;
-    }
-    final tipo = (invoice.tipoecf ?? '').toUpperCase();
-    if (tipo.isNotEmpty) {
-      if (RegExp(r'^\d+$').hasMatch(tipo)) {
-        final mapped = 'B${tipo.padLeft(2, '0')}';
-        return ["E41", "B11", "C11", "P11"].contains(mapped);
-      }
-      return ["E41", "B11", "C11", "P11"].contains(tipo);
-    }
-    return false;
+    final raw = invoice.tipoTabEnvioFactura?.trim();
+    if (raw == null || raw.isEmpty) return false;
+    final lower = raw.toLowerCase().replaceAll(' ', '');
+    return lower == 'facturapaciente';
   }
 
   Widget _actionsMenu(ERPInvoice invoice) {
@@ -374,15 +396,21 @@ class InvoiceTable extends StatelessWidget {
       );
     }
 
+    final isArs = _isArsInvoice(invoice);
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        btn(
-          FontAwesomeIcons.eye,
-          'Ver detalles',
-          const Color(0xFF005285),
-          () => onView(invoice),
-        ),
+        // "Ver detalles" solo para facturas NO ARS
+        // Oculto en tab ARS y también por fila si es ARS
+        if (onView != null && !isArs && !isArsTab) ...[
+          btn(
+            FontAwesomeIcons.eye,
+            'Ver detalles',
+            const Color(0xFF005285),
+            () => onView!(invoice),
+          ),
+        ],
         const SizedBox(width: 8),
         btn(
           FontAwesomeIcons.paperPlane,
@@ -399,8 +427,8 @@ class InvoiceTable extends StatelessWidget {
             () => onPreview!(invoice),
           ),
         ],
-        // Mostrar acciones ARS únicamente si los callbacks están habilitados (tab ARS)
-        if (onPreviewArsHeader != null) ...[
+        // Acciones ARS solo visibles si la factura es ARS
+        if (onPreviewArsHeader != null && isArs) ...[
           const SizedBox(width: 8),
           btn(
             FontAwesomeIcons.idBadge,
@@ -409,7 +437,7 @@ class InvoiceTable extends StatelessWidget {
             () => onPreviewArsHeader!(invoice),
           ),
         ],
-        if (onPreviewArsDetail != null) ...[
+        if (onPreviewArsDetail != null && isArs) ...[
           const SizedBox(width: 8),
           btn(
             FontAwesomeIcons.tableCellsLarge,

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+
 import '../controllers/dynamic_home_controller.dart';
 import '../models/erp_invoice.dart';
-import '../models/ui_types.dart';
 import '../widgets/invoice_table.dart';
 
 /// Widget que muestra una tabla de datos dinámicos basada en el controlador dinámico
@@ -35,7 +35,8 @@ class DynamicDataTable extends StatelessWidget {
 
         // Determinar si estamos en el tab ARS
         final isArsTab =
-            (controller.currentTab?.tabType?.toLowerCase().contains('ars') ?? false);
+            (controller.currentTab?.tabType?.toLowerCase().contains('ars') ??
+            false);
 
         // Mostrar tabla de facturas
         return Container(
@@ -53,12 +54,13 @@ class DynamicDataTable extends StatelessWidget {
             onView: onView,
             onSend: onSend,
             onPreview: onPreview,
-            onPreviewArsHeader: isArsTab ? onPreviewArsHeader : null,
-            onPreviewArsDetail: isArsTab ? onPreviewArsDetail : null,
+            onPreviewArsHeader: onPreviewArsHeader,
+            onPreviewArsDetail: onPreviewArsDetail,
             onToggleSelection: controller.toggleSelection,
             onToggleSelectAll: controller.toggleSelectAll,
             isSelected: controller.isSelected,
             isAllSelected: controller.isAllSelected,
+            isArsTab: isArsTab,
           ),
         );
       },
