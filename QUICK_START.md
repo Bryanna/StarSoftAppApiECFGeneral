@@ -16,7 +16,13 @@ git commit -m "Tu mensaje de commit"
 git push origin main
 ```
 
-**¡Eso es todo!** 🎉 GitHub Actions se encargará automáticamente de:
+**¡Eso es todo!** 🎉 El nuevo workflow optimizado se encarga automáticamente de:
+
+- ✅ Detectar automáticamente el `base-href` correcto
+- ✅ Construir la aplicación Flutter para web
+- ✅ Usar el sistema oficial de GitHub Pages
+- ✅ Optimizar para mejor rendimiento
+- ✅ Desplegar de forma más rápida y confiable
 
 - ✅ Construir la aplicación Flutter para web
 - ✅ Optimizar los archivos para GitHub Pages

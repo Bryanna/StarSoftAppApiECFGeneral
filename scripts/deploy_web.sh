@@ -23,9 +23,15 @@ flutter pub get
 echo "🧹 Limpiando build anterior..."
 flutter clean
 
+# Detectar el nombre del repositorio para base-href
+REPO_NAME=$(basename "$(git rev-parse --show-toplevel)" 2>/dev/null || echo "facturacion")
+BASE_HREF="/$REPO_NAME/"
+
+echo "🔗 Base HREF detectado: $BASE_HREF"
+
 # Construir para web
 echo "🏗️ Construyendo aplicación web..."
-flutter build web --release --web-renderer html --base-href "/facturacion/"
+flutter build web --release --web-renderer html --base-href "$BASE_HREF"
 
 # Agregar archivos necesarios para GitHub Pages
 echo "📄 Preparando archivos para GitHub Pages..."

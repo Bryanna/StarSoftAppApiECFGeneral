@@ -6,7 +6,7 @@
 # Verificar que se proporcione un mensaje de commit
 if [ -z "$1" ]; then
     echo "❌ Error: Debes proporcionar un mensaje de commit"
-    echo "Uso: ./scripts/commit_and_deploy.sh \"mensaje del commit\""
+    echo "💡 Uso: ./scripts/commit_and_deploy.sh \"mensaje del commit\""
     exit 1
 fi
 
@@ -23,11 +23,11 @@ if [ ! -d ".git" ]; then
 fi
 
 # Verificar el estado del repositorio
-echo "📊 Verificando estado del repositorio..."
-git status --porcelain
+echo "📊 Verificando cambios..."
+git status --short
 
 # Agregar todos los cambios
-echo "📦 Agregando cambios al staging..."
+echo "📦 Agregando cambios..."
 git add .
 
 # Verificar si hay cambios para commitear
@@ -45,25 +45,33 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# Obtener la rama actual
+# Obtener información del repositorio
+REPO_URL=$(git config --get remote.origin.url)
+REPO_NAME=$(basename -s .git "$REPO_URL")
+USER_NAME=$(echo "$REPO_URL" | sed 's/.*github.com[:/]\([^/]*\)\/.*/\1/')
 CURRENT_BRANCH=$(git branch --show-current)
-echo "🌿 Rama actual: $CURRENT_BRANCH"
+
+echo "🌿 Rama: $CURRENT_BRANCH"
+echo "📁 Repositorio: $USER_NAME/$REPO_NAME"
 
 # Push a la rama actual
-echo "🚀 Haciendo push a origin/$CURRENT_BRANCH..."
+echo "🚀 Haciendo push..."
 git push origin "$CURRENT_BRANCH"
 
 if [ $? -eq 0 ]; then
     echo ""
     echo "✅ ¡Commit y push completados exitosamente!"
+    echo ""
     echo "🔄 GitHub Actions se ejecutará automáticamente"
-    echo "⏱️  El despliegue tomará unos minutos"
+    echo "⏱️  El despliegue toma aproximadamente 2-3 minutos"
     echo ""
-    echo "🌐 Una vez completado, tu app estará disponible en:"
-    echo "   https://$(git config --get remote.origin.url | sed 's/.*github.com[:/]\([^/]*\)\/\([^.]*\).*/\1.github.io\/\2/')/"
+    echo "🌐 Tu app estará disponible en:"
+    echo "   https://$USER_NAME.github.io/$REPO_NAME/"
     echo ""
-    echo "📊 Puedes ver el progreso en:"
-    echo "   https://github.com/$(git config --get remote.origin.url | sed 's/.*github.com[:/]\([^/]*\)\/\([^.]*\).*/\1\/\2/')/actions"
+    echo "📊 Ver progreso del despliegue:"
+    echo "   https://github.com/$USER_NAME/$REPO_NAME/actions"
+    echo ""
+    echo "🎉 ¡Listo! El despliegue automático está en progreso."
 else
     echo "❌ Error al hacer push"
     exit 1

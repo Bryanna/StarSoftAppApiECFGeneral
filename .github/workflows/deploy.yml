@@ -1,11 +1,11 @@
-name: 🚀 Build and Deploy to GitHub Pages
+name: 🚀 Deploy Flutter Web to GitHub Pages
 
 on:
   push:
     branches: [ main, master ]
-  workflow_dispatch: # Permite ejecutar manualmente desde GitHub
+  workflow_dispatch: # Permite ejecutar manualmente
 
-# Configurar permisos para GitHub Pages
+# Permisos necesarios para GitHub Pages
 permissions:
   contents: read
   pages: write
@@ -14,41 +14,63 @@ permissions:
 # Solo permitir un despliegue concurrente
 concurrency:
   group: "pages"
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: 📥 Checkout repository
+    - name: 📥 Checkout
       uses: actions/checkout@v4
 
     - name: 🔧 Setup Flutter
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.32.8'
-        channel: 'stable'
+        channel: "stable"
+        flutter-version: "3.32.8"
         cache: true
 
-    - name: 📦 Get dependencies
+    - name: 🧮 Compute base href
+      shell: bash
+      run: |
+        REPO="${{ github.event.repository.name }}"
+        if [[ "$REPO" == *.github.io ]]; then
+          echo "BASE_HREF=/" >> $GITHUB_ENV
+        else
+          echo "BASE_HREF=/$REPO/" >> $GITHUB_ENV
+        fi
+        echo "🔗 Base HREF será: $BASE_HREF"
+
+    - name: 📦 Flutter pub get
       run: flutter pub get
 
-    - name: 🌐 Enable web support
-      run: flutter config --enable-web
+    - name: 🏗️ Build web (release)
+      run: |
+        flutter config --enable-web
+        flutter build web --release --base-href "$BASE_HREF" --web-renderer html
 
-    - name: 🏗️ Build web application
-      run: flutter build web --release --web-renderer html --base-href "/facturacion/"
-
-    - name: 📄 Add .nojekyll file
+    - name: 📄 Add .nojekyll
       run: touch build/web/.nojekyll
 
-    - name: 🚀 Deploy to GitHub Pages
-      uses: peaceiris/actions-gh-pages@v4
+    # Opcional: agregar CNAME para dominio personalizado
+    - name: 🌐 Add CNAME (optional)
+      if: vars.CUSTOM_DOMAIN != ''
+      run: echo "${{ vars.CUSTOM_DOMAIN }}" > build/web/CNAME
+
+    - name: 📤 Upload artifact
+      uses: actions/upload-pages-artifact@v3
       with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./build/web
-        force_orphan: true
-        user_name: 'github-actions[bot]'
-        user_email: 'github-actions[bot]@users.noreply.github.com'
-        commit_message: '🚀 Deploy Flutter web app to GitHub Pages [skip ci]'
+        path: build/web
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+    - name: 🚀 Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
