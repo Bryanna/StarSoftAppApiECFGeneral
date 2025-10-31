@@ -1,0 +1,27 @@
+# Configuración para GitHub Pages
+# Este archivo asegura que GitHub Pages esté configurado correctamente
+
+# Configuración del sitio
+site:
+  name: "Sistema de Facturación Electrónica"
+  description: "Sistema de gestión de facturas electrónicas para República Dominicana"
+  url: "https://[tu-usuario].github.io"
+  baseurl: "/facturacion"
+
+# Configuración de build
+build:
+  source: "build/web"
+  destination: "_site"
+
+# Plugins y configuraciones
+plugins:
+  - jekyll-sitemap
+  - jekyll-feed
+
+# Excluir archivos del build
+exclude:
+  - README.md
+  - DEPLOYMENT.md
+  - scripts/
+  - .github/
+  - .gitignore
