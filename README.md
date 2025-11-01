@@ -72,7 +72,7 @@ flutter run
 flutter config --enable-web
 
 # Build para producción
-flutter build web --release --web-renderer html
+flutter build web --release
 
 # O usar el script automatizado
 ./scripts/deploy_web.sh

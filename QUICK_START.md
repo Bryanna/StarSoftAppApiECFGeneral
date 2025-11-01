@@ -111,3 +111,33 @@ Si tienes problemas:
 1. Revisa los [Issues](https://github.com/[tu-usuario]/facturacion/issues)
 2. Crea un nuevo issue con detalles del problema
 3. Incluye los logs de GitHub Actions si es relevante
+
+## 🔧 Solución de Problemas
+
+### ❌ Error "--web-renderer not found"
+
+**✅ Ya corregido** - El workflow ahora usa la sintaxis correcta de Flutter. El parámetro `--web-renderer` fue removido en versiones recientes.
+
+### 🚫 El despliegue falla
+
+- Revisa los logs en GitHub Actions
+- Verifica que no haya errores de compilación: `flutter analyze`
+- Asegúrate de usar Flutter 3.32.8 o superior
+
+### 🌐 La app no carga
+
+- Verifica que Firebase esté configurado correctamente
+- Revisa la consola del navegador para errores
+- Verifica que el `base-href` sea correcto
+
+### 🔄 Cambios no se reflejan
+
+- Espera 2-3 minutos después del commit
+- Limpia la caché del navegador (Ctrl+F5)
+- Verifica que el workflow se haya ejecutado correctamente
+
+### 🔑 Problemas de Firebase
+
+- Agrega tu dominio de GitHub Pages a dominios autorizados
+- Verifica que las claves de API sean correctas
+- Revisa las reglas de Firestore si usas base de datos

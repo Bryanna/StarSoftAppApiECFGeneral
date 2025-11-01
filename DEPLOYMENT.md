@@ -43,7 +43,7 @@ flutter config --enable-web
 flutter pub get
 
 # Construir para web
-flutter build web --release --web-renderer html
+flutter build web --release
 
 # Servir localmente (opcional)
 cd build/web

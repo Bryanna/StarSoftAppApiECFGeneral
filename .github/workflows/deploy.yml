@@ -2,7 +2,7 @@ name: 🚀 Deploy Flutter Web to GitHub Pages
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master]
   workflow_dispatch: # Permite ejecutar manualmente
 
 # Permisos necesarios para GitHub Pages
@@ -21,47 +21,47 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: 📥 Checkout
-      uses: actions/checkout@v4
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
 
-    - name: 🔧 Setup Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        channel: "stable"
-        flutter-version: "3.32.8"
-        cache: true
+      - name: 🔧 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+          flutter-version: "3.32.8"
+          cache: true
 
-    - name: 🧮 Compute base href
-      shell: bash
-      run: |
-        REPO="${{ github.event.repository.name }}"
-        if [[ "$REPO" == *.github.io ]]; then
-          echo "BASE_HREF=/" >> $GITHUB_ENV
-        else
-          echo "BASE_HREF=/$REPO/" >> $GITHUB_ENV
-        fi
-        echo "🔗 Base HREF será: $BASE_HREF"
+      - name: 🧮 Compute base href
+        shell: bash
+        run: |
+          REPO="${{ github.event.repository.name }}"
+          if [[ "$REPO" == *.github.io ]]; then
+            echo "BASE_HREF=/" >> $GITHUB_ENV
+          else
+            echo "BASE_HREF=/$REPO/" >> $GITHUB_ENV
+          fi
+          echo "🔗 Base HREF será: $BASE_HREF"
 
-    - name: 📦 Flutter pub get
-      run: flutter pub get
+      - name: 📦 Flutter pub get
+        run: flutter pub get
 
-    - name: 🏗️ Build web (release)
-      run: |
-        flutter config --enable-web
-        flutter build web --release --base-href "$BASE_HREF" --web-renderer html
+      - name: 🏗️ Build web (release)
+        run: |
+          flutter config --enable-web
+          flutter build web --release --base-href "$BASE_HREF"
 
-    - name: 📄 Add .nojekyll
-      run: touch build/web/.nojekyll
+      - name: 📄 Add .nojekyll
+        run: touch build/web/.nojekyll
 
-    # Opcional: agregar CNAME para dominio personalizado
-    - name: 🌐 Add CNAME (optional)
-      if: vars.CUSTOM_DOMAIN != ''
-      run: echo "${{ vars.CUSTOM_DOMAIN }}" > build/web/CNAME
+      # Opcional: agregar CNAME para dominio personalizado
+      - name: 🌐 Add CNAME (optional)
+        if: vars.CUSTOM_DOMAIN != ''
+        run: echo "${{ vars.CUSTOM_DOMAIN }}" > build/web/CNAME
 
-    - name: 📤 Upload artifact
-      uses: actions/upload-pages-artifact@v3
-      with:
-        path: build/web
+      - name: 📤 Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
 
   deploy:
     environment:
@@ -71,6 +71,6 @@ jobs:
     needs: build
 
     steps:
-    - name: 🚀 Deploy to GitHub Pages
-      id: deployment
-      uses: actions/deploy-pages@v4
+      - name: 🚀 Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

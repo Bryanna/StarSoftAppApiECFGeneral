@@ -31,7 +31,7 @@ echo "🔗 Base HREF detectado: $BASE_HREF"
 
 # Construir para web
 echo "🏗️ Construyendo aplicación web..."
-flutter build web --release --web-renderer html --base-href "$BASE_HREF"
+flutter build web --release --base-href "$BASE_HREF"
 
 # Agregar archivos necesarios para GitHub Pages
 echo "📄 Preparando archivos para GitHub Pages..."
