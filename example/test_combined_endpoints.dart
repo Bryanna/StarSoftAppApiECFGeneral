@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../lib/screens/configuracion/configuracion_controller.dart';
+
 import '../lib/controllers/dynamic_home_controller.dart';
+import '../lib/screens/configuracion/configuracion_controller.dart';
 
 /// Test que demuestra la combinación de datos de múltiples endpoints
 class TestCombinedEndpointsScreen extends StatelessWidget {
@@ -79,13 +80,13 @@ class _ExplanationCard extends StatelessWidget {
             _ExplanationStep(
               number: '1',
               title: 'Endpoint ARS',
-              description: 'http://137.184.7.44:3390/api/ars/full',
+              description: 'https://cempsavid.duckdns.org/api/ars/full',
               subtitle: 'Datos de facturas ARS con tipo_tab_envio_factura',
             ),
             _ExplanationStep(
               number: '2',
               title: 'Endpoint Invoices',
-              description: 'http://137.184.7.44:3390/api/invoices',
+              description: 'https://cempsavid.duckdns.org/api/invoices',
               subtitle: 'Datos de facturas generales',
             ),
             _ExplanationStep(
@@ -247,7 +248,8 @@ class _ConfigurationCard extends StatelessWidget {
                   child: ElevatedButton.icon(
                     onPressed: () {
                       // Configurar URL base
-                      controller.baseERPUrl = 'http://137.184.7.44:3390/api';
+                      controller.baseERPUrl =
+                          'https://cempsavid.duckdns.org/api';
                       controller.baseERPUrlCtrl.text = controller.baseERPUrl;
 
                       // Configurar ambos endpoints

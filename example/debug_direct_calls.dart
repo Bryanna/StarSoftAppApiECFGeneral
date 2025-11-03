@@ -1,7 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
+
 import '../lib/screens/configuracion/configuracion_controller.dart';
 
 void main() {
@@ -35,7 +37,7 @@ class _DebugDirectCallsScreenState extends State<DebugDirectCallsScreen> {
   String _debugLog = '';
   Map<String, dynamic> _results = {};
 
-  final String _baseUrl = 'http://137.184.7.44:3390/api';
+  final String _baseUrl = 'https://cempsavid.duckdns.org/api';
   final String _arsEndpoint = '/ars/full';
   final String _invoicesEndpoint = '/invoices/full';
 

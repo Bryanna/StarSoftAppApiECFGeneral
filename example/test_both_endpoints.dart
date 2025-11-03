@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../lib/screens/configuracion/configuracion_controller.dart';
+
 import '../lib/controllers/dynamic_home_controller.dart';
+import '../lib/screens/configuracion/configuracion_controller.dart';
 
 /// Test que muestra cómo se usan AMBOS endpoints configurados
 class TestBothEndpointsScreen extends StatelessWidget {
@@ -212,7 +213,8 @@ class _EndpointsConfigurationCard extends StatelessWidget {
                   child: ElevatedButton.icon(
                     onPressed: () {
                       // Configurar ambos endpoints
-                      controller.baseERPUrl = 'http://137.184.7.44:3390/api';
+                      controller.baseERPUrl =
+                          'https://cempsavid.duckdns.org/api';
                       controller.baseERPUrlCtrl.text = controller.baseERPUrl;
 
                       // Agregar endpoint ARS (prioridad 1)

@@ -1,8 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
-import '../lib/screens/configuracion/configuracion_controller.dart';
 
 /// Test detallado para diagnosticar por qué no se ven datos de ambos endpoints
 class DebugEndpointsDetailedScreen extends StatefulWidget {
@@ -78,8 +78,8 @@ class _DebugEndpointsDetailedScreenState
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
-                  Text('1. http://137.184.7.44:3390/api/ars/full'),
-                  Text('2. http://137.184.7.44:3390/api/invoices/full'),
+                  Text('1. https://cempsavid.duckdns.org/api/ars/full'),
+                  Text('2. https://cempsavid.duckdns.org/api/invoices/full'),
                 ],
               ),
             ),
@@ -252,8 +252,8 @@ class _DebugEndpointsDetailedScreenState
     });
 
     final endpoints = {
-      'ars': 'http://137.184.7.44:3390/api/ars/full',
-      'invoices': 'http://137.184.7.44:3390/api/invoices/full',
+      'ars': 'https://cempsavid.duckdns.org/api/ars/full',
+      'invoices': 'https://cempsavid.duckdns.org/api/invoices/full',
     };
 
     for (final entry in endpoints.entries) {

@@ -1,7 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
 
 void main() {
   runApp(const TestApp());
@@ -38,17 +39,17 @@ class _TestIndividualEndpointsScreenState
   final List<Map<String, String>> _endpoints = [
     {
       'name': 'ARS Full',
-      'url': 'http://137.184.7.44:3390/api/ars/full',
+      'url': 'https://cempsavid.duckdns.org/api/ars/full',
       'description': 'Endpoint de facturas ARS con tipo_tab_envio_factura',
     },
     {
       'name': 'Invoices Full',
-      'url': 'http://137.184.7.44:3390/api/invoices/full',
+      'url': 'https://cempsavid.duckdns.org/api/invoices/full',
       'description': 'Endpoint de facturas generales (full)',
     },
     {
       'name': 'Invoices',
-      'url': 'http://137.184.7.44:3390/api/invoices',
+      'url': 'https://cempsavid.duckdns.org/api/invoices',
       'description': 'Endpoint de facturas generales (sin /full)',
     },
   ];

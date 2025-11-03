@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import '../lib/services/fake_data_service.dart';
-import '../lib/services/dynamic_tabs_service.dart';
+
 import '../lib/models/erp_invoice.dart';
+import '../lib/services/dynamic_tabs_service.dart';
+import '../lib/services/fake_data_service.dart';
 
 /// Test de debug para verificar por qué no aparecen los tabs
 class DebugTabsTestScreen extends StatefulWidget {
@@ -41,7 +41,8 @@ class _DebugTabsTestScreenState extends State<DebugTabsTestScreen> {
       // 2. Verificar si tienen tipoTabEnvioFactura
       int withTipoTab = 0;
       for (var datum in datumList) {
-        if (datum.tipoTabEnvioFactura != null && datum.tipoTabEnvioFactura!.isNotEmpty) {
+        if (datum.tipoTabEnvioFactura != null &&
+            datum.tipoTabEnvioFactura!.isNotEmpty) {
           withTipoTab++;
           debugInfo += '   - Encontrado: ${datum.tipoTabEnvioFactura}\n';
         }
@@ -50,18 +51,22 @@ class _DebugTabsTestScreenState extends State<DebugTabsTestScreen> {
 
       // 3. Convertir a ERPInvoice
       debugInfo += '2. Convirtiendo a ERPInvoice...\n';
-      erpInvoices = datumList.map((datum) => _convertToERPInvoice(datum)).toList();
+      erpInvoices = datumList
+          .map((datum) => _convertToERPInvoice(datum))
+          .toList();
       debugInfo += '   - ERPInvoices creados: ${erpInvoices.length}\n';
 
       // 4. Verificar ERPInvoices
       int erpWithTipoTab = 0;
       for (var invoice in erpInvoices) {
-        if (invoice.tipoTabEnvioFactura != null && invoice.tipoTabEnvioFactura!.isNotEmpty) {
+        if (invoice.tipoTabEnvioFactura != null &&
+            invoice.tipoTabEnvioFactura!.isNotEmpty) {
           erpWithTipoTab++;
           debugInfo += '   - ERP con tipoTab: ${invoice.tipoTabEnvioFactura}\n';
         }
       }
-      debugInfo += '   - ERPInvoices con tipoTabEnvioFactura: $erpWithTipoTab\n';
+      debugInfo +=
+          '   - ERPInvoices con tipoTabEnvioFactura: $erpWithTipoTab\n';
 
       // 5. Generar tabs
       debugInfo += '3. Generando tabs dinámicos...\n';
@@ -69,9 +74,9 @@ class _DebugTabsTestScreenState extends State<DebugTabsTestScreen> {
       debugInfo += '   - Tabs generados: ${tabs.length}\n';
 
       for (var tab in tabs) {
-        debugInfo += '   - Tab: ${tab.label} (${tab.count}) - Tipo: ${tab.tabType}\n';
+        debugInfo +=
+            '   - Tab: ${tab.label} (${tab.count}) - Tipo: ${tab.tabType}\n';
       }
-
     } catch (e, stackTrace) {
       debugInfo += 'ERROR: $e\n';
       debugInfo += 'Stack: $stackTrace\n';
@@ -100,10 +105,7 @@ class _DebugTabsTestScreenState extends State<DebugTabsTestScreen> {
         backgroundColor: const Color(0xFF005285),
         foregroundColor: Colors.white,
         actions: [
-          IconButton(
-            onPressed: _runDebugTest,
-            icon: const Icon(Icons.refresh),
-          ),
+          IconButton(onPressed: _runDebugTest, icon: const Icon(Icons.refresh)),
         ],
       ),
       body: loading
@@ -183,7 +185,8 @@ class _DebugTabsTestScreenState extends State<DebugTabsTestScreen> {
                                     const SizedBox(width: 12),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             tab.label,
@@ -193,7 +196,9 @@ class _DebugTabsTestScreenState extends State<DebugTabsTestScreen> {
                                           ),
                                           Text(
                                             'Count: ${tab.count} | ID: ${tab.id}',
-                                            style: const TextStyle(fontSize: 12),
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                            ),
                                           ),
                                           if (tab.tabType != null)
                                             Text(
@@ -247,13 +252,18 @@ class _DebugTabsTestScreenState extends State<DebugTabsTestScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text('ENCF: ${invoice.encf ?? "N/A"}'),
-                                    Text('Tipo ECF: ${invoice.tipoecf ?? "N/A"}'),
-                                    Text('Cliente: ${invoice.razonsocialcomprador ?? "N/A"}'),
+                                    Text(
+                                      'Tipo ECF: ${invoice.tipoecf ?? "N/A"}',
+                                    ),
+                                    Text(
+                                      'Cliente: ${invoice.razonsocialcomprador ?? "N/A"}',
+                                    ),
                                     Text(
                                       'TipoTabEnvioFactura: ${invoice.tipoTabEnvioFactura ?? "NULL"}',
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
-                                        color: invoice.tipoTabEnvioFactura != null
+                                        color:
+                                            invoice.tipoTabEnvioFactura != null
                                             ? Colors.green[700]
                                             : Colors.red[700],
                                       ),

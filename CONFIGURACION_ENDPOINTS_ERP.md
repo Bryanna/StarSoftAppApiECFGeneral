@@ -9,7 +9,7 @@ Se ha mejorado la configuración del sistema para permitir una gestión más fle
 ### 1. URL Base del ERP
 
 - Campo para configurar la URL base de tu sistema ERP
-- Ejemplo: `http://137.184.7.44:3390/api`
+- Ejemplo: `https://cempsavid.duckdns.org/api`
 - Se combina automáticamente with los endpoints específicos
 
 ### 2. Endpoints Específicos
@@ -31,7 +31,7 @@ El sistema viene preconfigurado con estos endpoints:
 
 ```json
 {
-  "baseERPUrl": "http://137.184.7.44:3390/api",
+  "baseERPUrl": "https://cempsavid.duckdns.org/api",
   "erpEndpoints": {
     "ars": "/ars/full",
     "ars_alt": "/ars/full",
@@ -46,11 +46,11 @@ El sistema viene preconfigurado con estos endpoints:
 
 Con la configuración por defecto, se generan estas URLs:
 
-- **ARS**: `http://137.184.7.44:3390/api/ars/full`
-- **ARS Alt**: `http://137.184.7.44:3390/api/ars/full`
-- **Invoices**: `http://137.184.7.44:3390/api/invoices`
-- **Clients**: `http://137.184.7.44:3390/api/clients`
-- **Products**: `http://137.184.7.44:3390/api/products`
+- **ARS**: `https://cempsavid.duckdns.org/api/ars/full`
+- **ARS Alt**: `https://cempsavid.duckdns.org/api/ars/full`
+- **Invoices**: `https://cempsavid.duckdns.org/api/invoices`
+- **Clients**: `https://cempsavid.duckdns.org/api/clients`
+- **Products**: `https://cempsavid.duckdns.org/api/products`
 
 ## Cómo Usar
 
@@ -84,7 +84,7 @@ Con la configuración por defecto, se generan estas URLs:
 // Obtener la URL completa de un endpoint
 final controller = Get.find<ConfiguracionController>();
 final arsUrl = controller.getFullEndpointUrl('ars');
-// Resultado: http://137.184.7.44:3390/api/ars/full
+// Resultado: https://cempsavid.duckdns.org/api/ars/full
 
 // Agregar un nuevo endpoint
 controller.addEndpoint('payments', '/payments/list');
@@ -103,7 +103,7 @@ La configuración se guarda automáticamente en Firebase Firestore:
 ```json
 {
   "companies/{companyRnc}": {
-    "baseERPUrl": "http://137.184.7.44:3390/api",
+    "baseERPUrl": "https://cempsavid.duckdns.org/api",
     "erpEndpoints": {
       "ars": "/ars/full",
       "ars_alt": "/ars/full",

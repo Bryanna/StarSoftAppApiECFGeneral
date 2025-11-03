@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../lib/screens/configuracion/configuracion_controller.dart';
+
 import '../lib/controllers/dynamic_home_controller.dart';
+import '../lib/screens/configuracion/configuracion_controller.dart';
 
 /// Test específico para el endpoint de ARS
 class TestARSEndpointScreen extends StatelessWidget {
@@ -132,7 +133,8 @@ class _ARSConfigurationCard extends StatelessWidget {
                     ElevatedButton.icon(
                       onPressed: () {
                         // Configurar manualmente el endpoint de ARS
-                        controller.baseERPUrl = 'http://137.184.7.44:3390/api';
+                        controller.baseERPUrl =
+                            'https://cempsavid.duckdns.org/api';
                         controller.baseERPUrlCtrl.text = controller.baseERPUrl;
                         controller.addEndpoint('ars', '/ars/full');
                         controller.addEndpoint('ars_alt', '/ars/full');

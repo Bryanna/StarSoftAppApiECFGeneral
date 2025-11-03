@@ -1,20 +1,15 @@
-import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:facturacion/models/erp_invoice_extensions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:http/http.dart' as http;
 import 'package:pdf/pdf.dart';
 
 import '../../models/erp_invoice.dart';
 import '../../models/invoice.dart';
-import '../../models/tipo_comprobante.dart';
 import '../../models/ui_types.dart';
 import '../../routes/app_routes.dart';
-import '../../services/enhanced_invoice_pdf_service.dart';
 import '../../services/fake_data_service.dart';
 import '../../services/invoice_service.dart';
 import '../../services/pdf_viewer_service.dart';

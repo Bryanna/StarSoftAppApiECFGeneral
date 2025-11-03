@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+
 import '../lib/screens/configuracion/configuracion_controller.dart';
 
 /// Test simple para verificar que los endpoints se muestren correctamente
@@ -77,7 +78,7 @@ class TestEndpointsSimpleScreen extends StatelessWidget {
                           controller: controller.baseERPUrlCtrl,
                           decoration: const InputDecoration(
                             border: OutlineInputBorder(),
-                            hintText: 'http://137.184.7.44:3390/api',
+                            hintText: 'https://cempsavid.duckdns.org/api',
                           ),
                           onChanged: (value) {
                             controller.baseERPUrl = value;

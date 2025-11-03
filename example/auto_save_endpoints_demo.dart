@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+
 import '../lib/screens/configuracion/configuracion_controller.dart';
 
 /// Demo del guardado automático de endpoints
@@ -150,7 +151,7 @@ class _BaseUrlCard extends StatelessWidget {
               controller: controller.baseERPUrlCtrl,
               decoration: InputDecoration(
                 labelText: 'URL Base',
-                hintText: 'http://137.184.7.44:3390/api',
+                hintText: 'https://cempsavid.duckdns.org/api',
                 border: const OutlineInputBorder(),
                 prefixIcon: const Icon(Icons.dns),
                 suffixIcon: Icon(

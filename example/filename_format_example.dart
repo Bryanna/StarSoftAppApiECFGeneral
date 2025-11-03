@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../lib/models/erp_invoice.dart';
 
 /// Ejemplo que muestra el nuevo formato de nombres de archivo RNC+ENCF.pdf
 ///

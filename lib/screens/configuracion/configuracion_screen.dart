@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'configuracion_controller.dart';
-import '../../services/theme_service.dart';
+
 import '../../models/erp_endpoint.dart';
+import '../../services/theme_service.dart';
+import 'configuracion_controller.dart';
 
 class ConfiguracionScreen extends StatelessWidget {
   const ConfiguracionScreen({super.key});
@@ -794,7 +795,7 @@ class _ConfigurationSection extends StatelessWidget {
               label: 'URL Base del ERP',
               icon: Icons.dns_outlined,
               helperText:
-                  'URL base de tu sistema ERP (ej: http://137.184.7.44:3390/api)',
+                  'URL base de tu sistema ERP (ej: https://cempsavid.duckdns.org/api)',
               readonly: false,
             ),
 

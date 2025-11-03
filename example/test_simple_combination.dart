@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../lib/screens/configuracion/configuracion_controller.dart';
+
 import '../lib/controllers/dynamic_home_controller.dart';
+import '../lib/screens/configuracion/configuracion_controller.dart';
 
 void main() {
   runApp(const TestApp());
@@ -14,10 +15,7 @@ class TestApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return GetMaterialApp(
       title: 'Test Simple Combination',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        useMaterial3: true,
-      ),
+      theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
       home: const TestSimpleCombinationScreen(),
       debugShowCheckedModeBanner: false,
     );
@@ -78,8 +76,12 @@ class TestSimpleCombinationScreen extends StatelessWidget {
                       child: const Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('• /ars/full → "tipo_tab_envio_factura": "FacturaArs"'),
-                          Text('• /invoices/full → "tipo_tab_envio_factura": "FacturaPaciente"'),
+                          Text(
+                            '• /ars/full → "tipo_tab_envio_factura": "FacturaArs"',
+                          ),
+                          Text(
+                            '• /invoices/full → "tipo_tab_envio_factura": "FacturaPaciente"',
+                          ),
                         ],
                       ),
                     ),
@@ -120,10 +122,14 @@ class TestSimpleCombinationScreen extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text('Base URL: ${controller.baseERPUrl}'),
-                              Text('Endpoints: ${controller.erpEndpoints.length}'),
+                              Text(
+                                'Endpoints: ${controller.erpEndpoints.length}',
+                              ),
                               const SizedBox(height: 8),
                               ...controller.erpEndpoints.entries.map((entry) {
-                                final fullUrl = controller.getFullEndpointUrl(entry.key);
+                                final fullUrl = controller.getFullEndpointUrl(
+                                  entry.key,
+                                );
                                 return Row(
                                   children: [
                                     Container(
@@ -172,15 +178,20 @@ class TestSimpleCombinationScreen extends StatelessWidget {
                           child: ElevatedButton.icon(
                             onPressed: () {
                               // Configurar exactamente los 2 endpoints que mencionas
-                              controller.baseERPUrl = 'http://137.184.7.44:3390/api';
-                              controller.baseERPUrlCtrl.text = controller.baseERPUrl;
+                              controller.baseERPUrl =
+                                  'https://cempsavid.duckdns.org/api';
+                              controller.baseERPUrlCtrl.text =
+                                  controller.baseERPUrl;
 
                               // Limpiar endpoints existentes
                               controller.erpEndpoints.clear();
 
                               // Agregar exactamente los 2 endpoints
                               controller.addEndpoint('ars', '/ars/full');
-                              controller.addEndpoint('invoices', '/invoices/full');
+                              controller.addEndpoint(
+                                'invoices',
+                                '/invoices/full',
+                              );
 
                               controller.update();
 
@@ -244,7 +255,9 @@ class TestSimpleCombinationScreen extends StatelessWidget {
                                 const SizedBox(
                                   width: 16,
                                   height: 16,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
                                 )
                               else
                                 Icon(
@@ -280,7 +293,9 @@ class TestSimpleCombinationScreen extends StatelessWidget {
                                     controller.loadFromRealEndpoint();
                                   },
                             icon: const Icon(Icons.refresh),
-                            label: const Text('Combinar Datos de Ambos Endpoints'),
+                            label: const Text(
+                              'Combinar Datos de Ambos Endpoints',
+                            ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.blue[700],
                               foregroundColor: Colors.white,
@@ -317,7 +332,9 @@ class TestSimpleCombinationScreen extends StatelessWidget {
                           Icon(Icons.inbox, size: 48, color: Colors.grey[400]),
                           const SizedBox(height: 8),
                           const Text('No hay datos para mostrar'),
-                          const Text('Configura los endpoints y carga los datos'),
+                          const Text(
+                            'Configura los endpoints y carga los datos',
+                          ),
                         ],
                       ),
                     ),
@@ -329,9 +346,14 @@ class TestSimpleCombinationScreen extends StatelessWidget {
                     .where((inv) => inv.tipoTabEnvioFactura == 'FacturaArs')
                     .length;
                 final pacienteInvoices = controller.allInvoices
-                    .where((inv) => inv.tipoTabEnvioFactura == 'FacturaPaciente')
+                    .where(
+                      (inv) => inv.tipoTabEnvioFactura == 'FacturaPaciente',
+                    )
                     .length;
-                final otherInvoices = controller.allInvoices.length - arsInvoices - pacienteInvoices;
+                final otherInvoices =
+                    controller.allInvoices.length -
+                    arsInvoices -
+                    pacienteInvoices;
 
                 return Card(
                   child: Padding(
@@ -366,12 +388,17 @@ class TestSimpleCombinationScreen extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              Text('📊 Total facturas: ${controller.allInvoices.length}'),
+                              Text(
+                                '📊 Total facturas: ${controller.allInvoices.length}',
+                              ),
                               Text('🏥 FacturaArs: $arsInvoices'),
                               Text('👤 FacturaPaciente: $pacienteInvoices'),
-                              if (otherInvoices > 0) Text('❓ Otros tipos: $otherInvoices'),
+                              if (otherInvoices > 0)
+                                Text('❓ Otros tipos: $otherInvoices'),
                               const SizedBox(height: 8),
-                              Text('🏷️ Tabs generados: ${controller.dynamicTabs.length}'),
+                              Text(
+                                '🏷️ Tabs generados: ${controller.dynamicTabs.length}',
+                              ),
                             ],
                           ),
                         ),
@@ -410,7 +437,9 @@ class TestSimpleCombinationScreen extends StatelessWidget {
                                       : '❌ PROBLEMA PERSISTE: Solo se ven datos de un endpoint',
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    color: (arsInvoices > 0 && pacienteInvoices > 0)
+                                    color:
+                                        (arsInvoices > 0 &&
+                                            pacienteInvoices > 0)
                                         ? Colors.green[700]
                                         : Colors.red[700],
                                   ),
@@ -464,8 +493,10 @@ class TestSimpleCombinationScreen extends StatelessWidget {
                         const SizedBox(height: 8),
 
                         ...controller.allInvoices.take(5).map((invoice) {
-                          final isArs = invoice.tipoTabEnvioFactura == 'FacturaArs';
-                          final isPaciente = invoice.tipoTabEnvioFactura == 'FacturaPaciente';
+                          final isArs =
+                              invoice.tipoTabEnvioFactura == 'FacturaArs';
+                          final isPaciente =
+                              invoice.tipoTabEnvioFactura == 'FacturaPaciente';
 
                           return Container(
                             margin: const EdgeInsets.only(bottom: 4),

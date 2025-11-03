@@ -1,12 +1,14 @@
 import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../services/firestore_service.dart';
-import '../../services/firebase_auth_service.dart';
-import '../../services/logger_service.dart';
-import '../../services/erp_endpoint_service.dart';
+
 import '../../models/erp_endpoint.dart';
+import '../../services/erp_endpoint_service.dart';
+import '../../services/firebase_auth_service.dart';
+import '../../services/firestore_service.dart';
+import '../../services/logger_service.dart';
 
 enum InvoiceEnvironment { certificacion, test, produccion }
 
@@ -50,7 +52,7 @@ class ConfiguracionController extends GetxController {
       'https://ecfrecepcion.starsoftdominicana.com/ecf/api';
 
   // Configuración de URL base para endpoints ERP
-  String baseERPUrl = 'http://137.184.7.44:3390/api';
+  String baseERPUrl = 'https://cempsavid.duckdns.org/api';
 
   // Endpoints específicos configurados
   Map<String, String> erpEndpoints = {
@@ -294,7 +296,7 @@ class ConfiguracionController extends GetxController {
 
         // Configuración de URL base ERP
         baseERPUrl =
-            companyData!['baseERPUrl'] ?? 'http://137.184.7.44:3390/api';
+            companyData!['baseERPUrl'] ?? 'https://cempsavid.duckdns.org/api';
         baseERPUrlCtrl.text = baseERPUrl;
 
         // Configuración de endpoints ERP específicos
@@ -972,7 +974,7 @@ class ConfiguracionController extends GetxController {
     void setupARSEndpoint() {
       // Configurar URL base si no está configurada
       if (baseERPUrl.isEmpty || baseERPUrl == 'Sin configurar') {
-        baseERPUrl = 'http://137.184.7.44:3390/api';
+        baseERPUrl = 'https://cempsavid.duckdns.org/api';
         baseERPUrlCtrl.text = baseERPUrl;
       }
 

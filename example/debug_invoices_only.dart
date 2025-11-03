@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+
+import '../lib/models/ui_types.dart';
 import '../lib/screens/configuracion/configuracion_controller.dart';
 import '../lib/services/invoice_service.dart';
-import '../lib/models/ui_types.dart';
 
 /// Test específico para debuggear por qué solo se ven datos de ARS
 class DebugInvoicesOnlyScreen extends StatefulWidget {
@@ -164,7 +165,7 @@ class _DebugInvoicesOnlyScreenState extends State<DebugInvoicesOnlyScreen> {
                             onPressed: () {
                               // Configurar ambos endpoints
                               controller.baseERPUrl =
-                                  'http://137.184.7.44:3390/api';
+                                  'https://cempsavid.duckdns.org/api';
                               controller.baseERPUrlCtrl.text =
                                   controller.baseERPUrl;
                               controller.addEndpoint('ars', '/ars/full');

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../lib/screens/configuracion/configuracion_controller.dart';
+
 import '../lib/controllers/dynamic_home_controller.dart';
+import '../lib/screens/configuracion/configuracion_controller.dart';
 
 void main() {
   runApp(const TestApp());
@@ -109,7 +110,7 @@ class TestCurrentSystemScreen extends StatelessWidget {
                             onPressed: () {
                               // Configurar exactamente los 2 endpoints
                               controller.baseERPUrl =
-                                  'http://137.184.7.44:3390/api';
+                                  'https://cempsavid.duckdns.org/api';
                               controller.baseERPUrlCtrl.text =
                                   controller.baseERPUrl;
 

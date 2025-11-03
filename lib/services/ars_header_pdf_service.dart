@@ -83,7 +83,7 @@ class ArsHeaderPdfService {
       color: PdfColors.black,
     );
 
-    pw.Widget _labelValue(String label, String value) {
+    pw.Widget labelValue(String label, String value) {
       return pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
@@ -100,7 +100,7 @@ class ArsHeaderPdfService {
       );
     }
 
-    pw.Widget _sectionTitle(String text) {
+    pw.Widget sectionTitle(String text) {
       return pw.Container(
         margin: const pw.EdgeInsets.only(top: 6, bottom: 4),
         child: pw.Text(
@@ -114,7 +114,7 @@ class ArsHeaderPdfService {
       );
     }
 
-    String _fmtMoney(num v) => NumberFormat('#,##0.00', 'es_DO').format(v);
+    String fmtMoney(num v) => NumberFormat('#,##0.00', 'es_DO').format(v);
 
     // Preparar resumen por departamento desde detalle_factura
     final detalleStr = invoice.detalleFactura;
@@ -179,7 +179,7 @@ class ArsHeaderPdfService {
                       border: pw.Border.all(color: PdfColors.grey300),
                     ),
                     child: logo != null
-                        ? pw.Image(logo!, fit: pw.BoxFit.contain)
+                        ? pw.Image(logo, fit: pw.BoxFit.contain)
                         : pw.Center(
                             child: pw.Text(
                               'LOGO',
@@ -236,11 +236,11 @@ class ArsHeaderPdfService {
                     child: pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
-                        _labelValue('No. Factura', numeroInterno),
-                        _labelValue('NCF', ncf),
-                        _labelValue('Fecha', fechaEmision),
-                        _labelValue('Válido Hasta', fechaVenc),
-                        _labelValue('Condición', condicion),
+                        labelValue('No. Factura', numeroInterno),
+                        labelValue('NCF', ncf),
+                        labelValue('Fecha', fechaEmision),
+                        labelValue('Válido Hasta', fechaVenc),
+                        labelValue('Condición', condicion),
                       ],
                     ),
                   ),
@@ -264,7 +264,7 @@ class ArsHeaderPdfService {
               // Grid de resumen por departamento (Cantidad / Descripción / Cobertura)
               if (deptRows.isNotEmpty) ...[
                 pw.SizedBox(height: 12),
-                _sectionTitle('Detalle por Departamento'),
+                sectionTitle('Detalle por Departamento'),
                 pw.Container(
                   decoration: pw.BoxDecoration(
                     border: pw.Border.all(color: PdfColors.grey300),
@@ -320,13 +320,13 @@ class ArsHeaderPdfService {
                               padding: const pw.EdgeInsets.all(6),
                               child: pw.Align(
                                 alignment: pw.Alignment.centerRight,
-                                child: pw.Text(_fmtMoney(cobertura),
+                                child: pw.Text(fmtMoney(cobertura),
                                     style: valueStyle),
                               ),
                             ),
                           ],
                         );
-                      }).toList(),
+                      }),
                     ],
                   ),
                 ),
@@ -361,10 +361,10 @@ class ArsHeaderPdfService {
                     child: pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.stretch,
                       children: [
-                        _labelValue('Subtotal', invoice.formattedSubtotal),
-                        _labelValue('ITBIS', invoice.formattedItbis),
+                        labelValue('Subtotal', invoice.formattedSubtotal),
+                        labelValue('ITBIS', invoice.formattedItbis),
                         pw.Divider(color: PdfColors.grey300),
-                        _labelValue('Total', invoice.formattedTotal),
+                        labelValue('Total', invoice.formattedTotal),
                       ],
                     ),
                   ),

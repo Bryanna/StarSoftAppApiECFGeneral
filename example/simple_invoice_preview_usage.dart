@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+
 import '../lib/models/erp_invoice.dart';
 import '../lib/screens/invoice_preview/invoice_preview_screen.dart';
 
@@ -30,9 +30,9 @@ class SimpleInvoicePreviewUsageExample extends StatelessWidget {
             // Título y descripción
             Text(
               'Vista Previa Simple de Facturas',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
 
@@ -76,30 +76,28 @@ class SimpleInvoicePreviewUsageExample extends StatelessWidget {
       children: [
         const Text(
           'Características Principales:',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 12),
-        ...features.map((feature) => Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                feature.substring(0, 2), // Emoji
-                style: const TextStyle(fontSize: 16),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  feature.substring(3), // Texto sin emoji
-                  style: const TextStyle(fontSize: 14),
+        ...features.map(
+          (feature) => Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  feature.substring(0, 2), // Emoji
+                  style: const TextStyle(fontSize: 16),
                 ),
-              ),
-            ],
-          ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    feature.substring(3), // Texto sin emoji
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ],
@@ -112,10 +110,7 @@ class SimpleInvoicePreviewUsageExample extends StatelessWidget {
       children: [
         const Text(
           'Probar con Diferentes Tipos:',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 16),
 
@@ -182,9 +177,9 @@ class SimpleInvoicePreviewUsageExample extends StatelessWidget {
         children: [
           Text(
             'Antes vs Ahora - Versión Simple',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 16),
 
@@ -262,7 +257,9 @@ class SimpleInvoicePreviewUsageExample extends StatelessWidget {
 
       // Emisor
       rncemisor: '123456789',
-      razonsocialemisor: isMedical ? 'CENTRO MÉDICO EJEMPLO SRL' : 'EMPRESA EJEMPLO SRL',
+      razonsocialemisor: isMedical
+          ? 'CENTRO MÉDICO EJEMPLO SRL'
+          : 'EMPRESA EJEMPLO SRL',
       direccionemisor: 'Av. Principal No. 123, Santo Domingo',
       telefonoemisor1: '809-555-0123',
       correoemisor: 'facturacion@ejemplo.com',
@@ -289,7 +286,8 @@ class SimpleInvoicePreviewUsageExample extends StatelessWidget {
       montototal: '13800.00',
 
       // Detalles básicos
-      detalleFactura: '''[
+      detalleFactura:
+          '''[
         {
           "referencia": "ITEM001",
           "descripcion": "${isMedical ? 'Consulta médica especializada' : 'Producto/Servicio principal'}",
@@ -323,18 +321,16 @@ class SimplePreviewDemo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Demo: Vista Previa Simple'),
-      ),
+      appBar: AppBar(title: const Text('Demo: Vista Previa Simple')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
             Text(
               'Vista Previa Simplificada',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
@@ -389,7 +385,8 @@ class SimplePreviewDemo extends StatelessWidget {
               child: ElevatedButton.icon(
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (context) => const SimpleInvoicePreviewUsageExample(),
+                    builder: (context) =>
+                        const SimpleInvoicePreviewUsageExample(),
                   ),
                 ),
                 icon: const Icon(Icons.visibility),

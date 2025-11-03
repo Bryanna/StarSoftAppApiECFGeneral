@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../lib/screens/configuracion/configuracion_controller.dart';
+
 import '../lib/controllers/dynamic_home_controller.dart';
+import '../lib/screens/configuracion/configuracion_controller.dart';
 
 /// Test de debug para verificar que se llamen AMBOS endpoints
 class TestDebugEndpointsScreen extends StatelessWidget {
@@ -88,9 +89,9 @@ class _EndpointsSetupCard extends StatelessWidget {
 
                       _EndpointInfo(
                         name: 'ARS',
-                        baseUrl: 'http://137.184.7.44:3390/api',
+                        baseUrl: 'https://cempsavid.duckdns.org/api',
                         path: '/ars/full',
-                        fullUrl: 'http://137.184.7.44:3390/api/ars/full',
+                        fullUrl: 'https://cempsavid.duckdns.org/api/ars/full',
                         description:
                             'Datos de facturas ARS con tipo_tab_envio_factura',
                       ),
@@ -99,9 +100,10 @@ class _EndpointsSetupCard extends StatelessWidget {
 
                       _EndpointInfo(
                         name: 'INVOICES',
-                        baseUrl: 'http://137.184.7.44:3390/api',
+                        baseUrl: 'https://cempsavid.duckdns.org/api',
                         path: '/invoices/full',
-                        fullUrl: 'http://137.184.7.44:3390/api/invoices/full',
+                        fullUrl:
+                            'https://cempsavid.duckdns.org/api/invoices/full',
                         description: 'Datos de facturas generales',
                       ),
                     ],
@@ -153,7 +155,8 @@ class _EndpointsSetupCard extends StatelessWidget {
                   child: ElevatedButton.icon(
                     onPressed: () {
                       // Configurar URL base
-                      controller.baseERPUrl = 'http://137.184.7.44:3390/api';
+                      controller.baseERPUrl =
+                          'https://cempsavid.duckdns.org/api';
                       controller.baseERPUrlCtrl.text = controller.baseERPUrl;
 
                       // Limpiar endpoints existentes
@@ -478,8 +481,8 @@ class _InstructionsCard extends StatelessWidget {
               ),
               child: Text(
                 'Deberías ver en la consola:\n'
-                '🔗 Endpoint 1: http://137.184.7.44:3390/api/ars/full\n'
-                '🔗 Endpoint 2: http://137.184.7.44:3390/api/invoices/full\n'
+                '🔗 Endpoint 1: https://cempsavid.duckdns.org/api/ars/full\n'
+                '🔗 Endpoint 2: https://cempsavid.duckdns.org/api/invoices/full\n'
                 '✅ ÉXITO - Endpoint: [cada URL]\n'
                 '✅ Facturas obtenidas: [número]',
                 style: TextStyle(

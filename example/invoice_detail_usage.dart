@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+
 import '../lib/models/erp_invoice.dart';
 import '../lib/screens/invoice_preview/invoice_preview_screen.dart';
 
@@ -83,29 +83,27 @@ class InvoiceDetailUsageExample extends StatelessWidget {
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 12),
-        ...features
-            .map(
-              (feature) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      feature.substring(0, 2), // Emoji
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        feature.substring(3), // Texto sin emoji
-                        style: const TextStyle(fontSize: 14),
-                      ),
-                    ),
-                  ],
+        ...features.map(
+          (feature) => Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  feature.substring(0, 2), // Emoji
+                  style: const TextStyle(fontSize: 16),
                 ),
-              ),
-            )
-            ,
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    feature.substring(3), // Texto sin emoji
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }

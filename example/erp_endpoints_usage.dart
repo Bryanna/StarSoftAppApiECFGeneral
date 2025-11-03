@@ -1,22 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+
 import '../lib/screens/configuracion/configuracion_controller.dart';
 
 /// Ejemplo de uso de la nueva configuración de endpoints ERP
 ///
 /// Esta configuración permite:
-/// 1. Definir una URL base para el ERP (ej: http://137.184.7.44:3390/api)
+/// 1. Definir una URL base para el ERP (ej: https://cempsavid.duckdns.org/api)
 /// 2. Configurar endpoints específicos (ej: /ars/full, /invoices, /clients)
 /// 3. Obtener URLs completas combinando base + endpoint
 ///
 /// Ejemplo de configuración:
-/// - URL Base: http://137.184.7.44:3390/api
+/// - URL Base: https://cempsavid.duckdns.org/api
 /// - Endpoints:
-///   - ars: /ars/full → http://137.184.7.44:3390/api/ars/full
-///   - ars_alt: /ars/full → http://137.184.7.44:3390/api/ars/full
-///   - invoices: /invoices → http://137.184.7.44:3390/api/invoices
-///   - clients: /clients → http://137.184.7.44:3390/api/clients
-///   - products: /products → http://137.184.7.44:3390/api/products
+///   - ars: /ars/full → https://cempsavid.duckdns.org/api/ars/full
+///   - ars_alt: /ars/full → https://cempsavid.duckdns.org/api/ars/full
+///   - invoices: /invoices → https://cempsavid.duckdns.org/api/invoices
+///   - clients: /clients → https://cempsavid.duckdns.org/api/clients
+///   - products: /products → https://cempsavid.duckdns.org/api/products
 
 class ERPEndpointsUsageExample extends StatelessWidget {
   const ERPEndpointsUsageExample({super.key});
@@ -227,8 +228,8 @@ class _TestButtons extends StatelessWidget {
 
   void _addSampleEndpoints(ConfiguracionController controller) {
     // Configurar URL base
-    controller.baseERPUrlCtrl.text = 'http://137.184.7.44:3390/api';
-    controller.baseERPUrl = 'http://137.184.7.44:3390/api';
+    controller.baseERPUrlCtrl.text = 'https://cempsavid.duckdns.org/api';
+    controller.baseERPUrl = 'https://cempsavid.duckdns.org/api';
 
     // Agregar endpoints de ejemplo
     controller.addEndpoint('ars', '/ars/full');
