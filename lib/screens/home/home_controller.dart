@@ -10,12 +10,14 @@ import '../../models/erp_invoice.dart';
 import '../../models/invoice.dart';
 import '../../models/ui_types.dart';
 import '../../routes/app_routes.dart';
+import '../../services/ars_detail_pdf_service.dart';
+import '../../services/ars_header_pdf_service.dart';
+import '../../services/company_config_service.dart';
 import '../../services/fake_data_service.dart';
 import '../../services/invoice_service.dart';
 import '../../services/pdf_viewer_service.dart';
 import '../../services/queue_processor_service.dart';
-import '../../services/ars_header_pdf_service.dart';
-import '../../services/ars_detail_pdf_service.dart';
+import '../../services/receipt_80mm_pdf_service.dart';
 import '../../widgets/enhanced_invoice_preview.dart';
 import '../../widgets/simple_invoice_modal.dart';
 
@@ -532,6 +534,83 @@ class HomeController extends GetxController {
         'Error',
         'No se pudo abrir la vista previa: $e',
         snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
+  Future<void> print80mmReceipt(ERPInvoice invoice) async {
+    try {
+      debugPrint('');
+      debugPrint(
+        '🖨️🖨️🖨️ PRINT 80MM RECEIPT CALLED - HOME CONTROLLER 🖨️🖨️🖨️',
+      );
+      debugPrint('🖨️ Generando recibo de 80mm para impresora térmica');
+      debugPrint('');
+
+      // Obtener configuración de la empresa
+      final companyConfigService = CompanyConfigService();
+      final companyConfig = await companyConfigService.getCompanyConfig();
+
+      debugPrint('🏢 Configuración de empresa obtenida:');
+      debugPrint('   - Razón Social: ${companyConfig?['razonSocial']}');
+      debugPrint('   - RNC: ${companyConfig?['rnc']}');
+      debugPrint('   - Logo URL: ${companyConfig?['logoUrl']}');
+
+      // Convertir ERPInvoice a Map simple
+      final invoiceMap = {
+        'ENCF': invoice.encf ?? invoice.numeroFactura,
+        'NumeroFacturaInterna':
+            invoice.numerofacturainterna ?? invoice.numeroFactura,
+        'FechaEmision': invoice.fechaemision ?? '',
+        'RNCEmisor': invoice.rncemisor ?? '',
+        'RazonSocialEmisor': invoice.razonsocialemisor ?? invoice.empresaNombre,
+        'DireccionEmisor': invoice.direccionemisor ?? '',
+        'RNCComprador': invoice.rnccomprador ?? '',
+        'RazonSocialComprador':
+            invoice.razonsocialcomprador ?? invoice.clienteNombre,
+        'MontoTotal': invoice.montototal ?? '0.00',
+        'MontoGravadoTotal': invoice.montogravadototal ?? '0.00',
+        'TotalITBIS': invoice.totalitbis ?? '0.00',
+        'MontoExento': invoice.montoexento ?? '0.00',
+        'CodigoSeguridad': invoice.codigoseguridad ?? '',
+        'fechahorafirma': invoice.fechahorafirma ?? '',
+        'link_original': invoice.linkOriginal ?? '',
+        'DetalleFactura': invoice.detalleFactura ?? '',
+        'fechavencimientosecuencia': invoice.fechavencimientosecuencia ?? '',
+        // Campos adicionales de ARS
+        'aseguradora': invoice.aseguradora ?? '',
+        'nss': invoice.nss ?? '',
+        'no_autorizacion': invoice.noAutorizacion ?? '',
+      };
+
+      // Generar PDF de 80mm con configuración de la empresa
+      final bytes = await Receipt80mmPdfService.buildReceipt80(
+        invoiceMap,
+        companyConfig: companyConfig,
+      );
+
+      final name =
+          'Recibo_80mm_${invoice.numeroFactura.isNotEmpty ? invoice.numeroFactura : 'CENSAVID'}';
+
+      // Mostrar en el visor con opción de imprimir
+      PdfViewerService.showPdf(pdfBytes: bytes, title: name, showActions: true);
+
+      Get.snackbar(
+        'Recibo 80mm Generado',
+        'Recibo listo para imprimir en impresora térmica de 80mm',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.orange,
+        colorText: Colors.white,
+        icon: const Icon(Icons.receipt, color: Colors.white),
+      );
+    } catch (e) {
+      debugPrint('[HomeController] Error generando recibo 80mm: $e');
+      Get.snackbar(
+        'Error',
+        'No se pudo generar el recibo 80mm: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
       );
     }
   }

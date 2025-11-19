@@ -1,3 +1,4 @@
+import 'package:calendar_date_picker2/calendar_date_picker2.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
@@ -11,7 +12,6 @@ import '../../services/firebase_auth_service.dart';
 import '../../services/user_service.dart';
 import '../../widgets/invoice_table.dart';
 import 'home_controller.dart';
-import 'package:calendar_date_picker2/calendar_date_picker2.dart';
 
 // Refactor: usamos StatelessWidget con estado manejado por GetX en HomeController
 class HomeScreen extends StatelessWidget {
@@ -406,6 +406,7 @@ class HomeScreen extends StatelessWidget {
         onView: controller.viewDetails,
         onSend: controller.sendInvoice,
         onPreview: controller.previewInvoice,
+        onPrint80mm: controller.print80mmReceipt,
         onPreviewArsHeader: controller.previewArsHeader,
         onPreviewArsDetail: controller.previewArsDetail,
         onToggleSelection: controller.toggleSelection,

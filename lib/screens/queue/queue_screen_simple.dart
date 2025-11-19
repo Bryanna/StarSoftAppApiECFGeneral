@@ -831,6 +831,11 @@ class QueueScreenSimple extends StatelessWidget {
           ),
         ),
         actions: [
+          if (data['dgii_request_data'] != null)
+            TextButton(
+              onPressed: () => _showRequestSent(context, data),
+              child: const Text('Ver Request'),
+            ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Cerrar'),

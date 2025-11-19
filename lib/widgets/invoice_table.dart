@@ -17,6 +17,7 @@ class InvoiceTable extends StatelessWidget {
   final InvoiceCallback? onView;
   final InvoiceCallback onSend;
   final InvoiceCallback? onPreview;
+  final InvoiceCallback? onPrint80mm; // Nuevo: Impresión 80mm
   final InvoiceCallback? onPreviewArsHeader;
   final InvoiceCallback? onPreviewArsDetail;
   final SelectionCallback? onToggleSelection;
@@ -24,13 +25,14 @@ class InvoiceTable extends StatelessWidget {
   final IsSelectedCallback? isSelected;
   final bool? isAllSelected;
   final bool isArsTab;
-  
+
   const InvoiceTable({
     super.key,
     required this.invoices,
     required this.onView,
     required this.onSend,
     this.onPreview,
+    this.onPrint80mm, // Nuevo: Impresión 80mm
     this.onPreviewArsHeader,
     this.onPreviewArsDetail,
     this.onToggleSelection,
@@ -425,6 +427,16 @@ class InvoiceTable extends StatelessWidget {
             'Vista previa',
             const Color(0xFF28a745),
             () => onPreview!(invoice),
+          ),
+        ],
+        // Botón de impresión 80mm
+        if (onPrint80mm != null) ...[
+          const SizedBox(width: 8),
+          btn(
+            FontAwesomeIcons.receipt,
+            'Imprimir 80mm',
+            const Color(0xFFFF6F00),
+            () => onPrint80mm!(invoice),
           ),
         ],
         // Acciones ARS solo visibles si la factura es ARS

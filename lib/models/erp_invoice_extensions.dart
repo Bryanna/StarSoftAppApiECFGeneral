@@ -33,10 +33,10 @@ extension ERPInvoiceExtensions on ERPInvoice {
       // --- e-CF (Comprobantes Electrónicos) ---
       case '31':
       case 'E31':
-        return 'Crédito Fiscal Electrónico';
+        return 'Factura Crédito Fiscal Electrónico';
       case '32':
       case 'E32':
-        return 'Consumo Electrónico';
+        return 'Factura Consumo Electrónico';
       case '33':
       case 'E33':
         return 'Nota de Débito Electrónica';
@@ -54,7 +54,7 @@ extension ERPInvoiceExtensions on ERPInvoice {
         return 'Regímenes Especiales Electrónico';
       case '45':
       case 'E45':
-        return 'Gubernamental Electrónico';
+        return 'Factura Gubernamental Electrónico';
 
       // --- Comprobantes Fiscales tradicionales (NCF tipo B / P / C / E) ---
       case 'B01':

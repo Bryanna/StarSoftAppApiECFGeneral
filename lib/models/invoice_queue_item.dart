@@ -12,6 +12,7 @@ class InvoiceQueueItem {
   final DateTime? processedAt;
   final String? errorMessage;
   final Map<String, dynamic>? dgiiResponse;
+  final Map<String, dynamic>? dgiiRequestData;
   final int retryCount;
   final int position;
 
@@ -26,6 +27,7 @@ class InvoiceQueueItem {
     this.processedAt,
     this.errorMessage,
     this.dgiiResponse,
+    this.dgiiRequestData,
     this.retryCount = 0,
     this.position = 0,
   });
@@ -47,6 +49,9 @@ class InvoiceQueueItem {
       dgiiResponse: data['dgii_response'] != null
           ? Map<String, dynamic>.from(data['dgii_response'])
           : null,
+      dgiiRequestData: data['dgii_request_data'] != null
+          ? Map<String, dynamic>.from(data['dgii_request_data'])
+          : null,
       retryCount: data['retry_count'] ?? 0,
       position: data['position'] ?? 0,
     );
@@ -65,6 +70,7 @@ class InvoiceQueueItem {
           : null,
       'error_message': errorMessage,
       'dgii_response': dgiiResponse,
+      'dgii_request_data': dgiiRequestData,
       'retry_count': retryCount,
       'position': position,
     };
@@ -75,6 +81,7 @@ class InvoiceQueueItem {
     DateTime? processedAt,
     String? errorMessage,
     Map<String, dynamic>? dgiiResponse,
+    Map<String, dynamic>? dgiiRequestData,
     int? retryCount,
     int? position,
   }) {
@@ -89,6 +96,7 @@ class InvoiceQueueItem {
       processedAt: processedAt ?? this.processedAt,
       errorMessage: errorMessage ?? this.errorMessage,
       dgiiResponse: dgiiResponse ?? this.dgiiResponse,
+      dgiiRequestData: dgiiRequestData ?? this.dgiiRequestData,
       retryCount: retryCount ?? this.retryCount,
       position: position ?? this.position,
     );

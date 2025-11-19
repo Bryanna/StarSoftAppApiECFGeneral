@@ -126,6 +126,7 @@ class FirebaseQueueService {
   Map<String, dynamic> _convertInvoiceToMap(ERPInvoice invoice) {
     return {
       'encf': invoice.encf,
+      'tipoecf': invoice.tipoecf,
       'numeroFactura': invoice.numeroFactura,
       'fechaemision': invoice.fechaemision,
       'montototal': invoice.montototal,
@@ -266,24 +267,45 @@ class FirebaseQueueService {
   ) async {
     // Recrear ERPInvoice desde los datos almacenados
     final invoiceData = queueItem.invoiceData;
-
-    // Crear scenario usando la lógica existente del HomeController
+    // Crear scenario con datos reales del ERP
     final scenario = await _createScenarioFromData(invoiceData);
 
     final requestBody = {
       'scenarios': [scenario],
     };
 
+    // Obtener endpoint desde Firebase; fallback al oficial si no está
+    final endpoint = await _getEndpointFromFirebase() ??
+        'https://ecf-fe.dgii.gov.do/testecf/rest/test-scenarios-json';
+
     debugPrint('[FirebaseQueueService] Enviando a DGII: ${queueItem.encf}');
+    debugPrint('[FirebaseQueueService] Endpoint: $endpoint');
 
     final response = await http.post(
-      Uri.parse('https://ecf-fe.dgii.gov.do/testecf/rest/test-scenarios-json'),
+      Uri.parse(endpoint),
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
       body: jsonEncode(requestBody),
     );
+
+    // Guardar también el request enviado para auditoría
+    try {
+      await _updateQueueItem(queueItem.id, {
+        'dgii_request_data': {
+          'endpoint': endpoint,
+          'method': 'POST',
+          'headers': {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          'scenarios': [scenario],
+        },
+      });
+    } catch (e) {
+      debugPrint('[FirebaseQueueService] Error guardando dgii_request_data: $e');
+    }
 
     if (response.statusCode == 200) {
       final responseData = jsonDecode(response.body);
@@ -305,10 +327,32 @@ class FirebaseQueueService {
   ) async {
     final scenario = <String, dynamic>{};
 
-    // Usar los mismos valores de prueba que tienes configurados
+    // Version
     scenario['Version'] = data['version'] ?? '1.0';
-    scenario['TipoeCF'] = '32'; // TEMPORAL: coincide con E320000000213
-    scenario['eNCF'] = 'E320000000213'; // NÚMERO DE PRUEBA TEMPORAL
+
+    // TipoeCF: tomar del ERP o inferir si es electrónico
+    final providedTipo = (data['tipoecf'] ?? data['TipoeCF'] ?? '')
+        .toString()
+        .trim();
+    String tipoecf = providedTipo;
+    if (tipoecf.isEmpty) {
+      final encf = (data['encf'] ?? '').toString();
+      if (encf.startsWith('E31')) tipoecf = '31';
+      if (encf.startsWith('E32')) tipoecf = '32';
+      if (encf.startsWith('E33')) tipoecf = '33';
+      if (encf.startsWith('E34')) tipoecf = '34';
+      if (encf.startsWith('E41')) tipoecf = '41';
+      if (encf.startsWith('E43')) tipoecf = '43';
+      if (encf.startsWith('E44')) tipoecf = '44';
+      if (encf.startsWith('E45')) tipoecf = '45';
+    }
+    scenario['TipoeCF'] = tipoecf;
+
+    // ENCF: tomar del ERP, sin valores por defecto
+    final encfReal = (data['encf'] ?? '').toString();
+    scenario['ENCF'] = encfReal;
+
+    // TipoIngresos / TipoPago
     scenario['TipoIngresos'] = data['tipoingresos'] ?? '01';
     scenario['TipoPago'] = data['tipopago'] ?? '1';
 
@@ -342,11 +386,10 @@ class FirebaseQueueService {
     // Totales
     scenario['MontoTotal'] = data['montototal'] ?? '0.00';
 
-    // CasoPrueba
-    final rncEmisor = data['rncemisor'] ?? '';
-    final encf = 'E320000000213';
-    if (rncEmisor.isNotEmpty) {
-      scenario['CasoPrueba'] = '$rncEmisor$encf';
+    // CasoPrueba: RNC + ENCF reales
+    final rncEmisor = data['rncemisor']?.toString() ?? '';
+    if (rncEmisor.isNotEmpty && encfReal.isNotEmpty) {
+      scenario['CasoPrueba'] = '$rncEmisor$encfReal';
     }
 
     // Items (simplificado)
@@ -396,6 +439,65 @@ class FirebaseQueueService {
     } catch (e) {
       debugPrint('[FirebaseQueueService] Error interpretando respuesta: $e');
       return QueueStatus.completed;
+    }
+  }
+
+  // Obtener endpoint desde Firebase (companies → baseEndpointUrl)
+  Future<String?> _getEndpointFromFirebase() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return null;
+
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      if (!userDoc.exists) return null;
+
+      final userData = userDoc.data()!;
+      final companyRnc = userData['companyRnc'] as String?;
+      if (companyRnc == null || companyRnc.isEmpty) return null;
+
+      final companyDoc = await _firestore
+          .collection('companies')
+          .doc(companyRnc)
+          .get();
+      if (!companyDoc.exists) return null;
+
+      final companyData = companyDoc.data()!;
+      final baseEndpointUrl = companyData['baseEndpointUrl'] as String?;
+      final envString = companyData['invoiceEnvironment'] as String?;
+      if (baseEndpointUrl == null || baseEndpointUrl.isEmpty) return null;
+
+      final base = baseEndpointUrl.replaceAll(RegExp(r'/+$'), '');
+
+      // Overrides opcionales desde Firestore
+      final testPathOverride = (companyData['dgiiTestPath'] as String?)?.trim();
+      final prodPathOverride = (companyData['dgiiProdPath'] as String?)?.trim();
+
+      final env = (envString ?? '').toLowerCase();
+      String pathSuffix;
+      if (env == 'test' || env == 'certificacion') {
+        if (testPathOverride != null && testPathOverride.isNotEmpty) {
+          pathSuffix = testPathOverride.startsWith('/')
+              ? testPathOverride
+              : '/$testPathOverride';
+        } else {
+          final envSegment = (env == 'certificacion') ? '' : '/test';
+          pathSuffix = '${envSegment}/api/test-scenarios-json';
+        }
+      } else {
+        if (prodPathOverride != null && prodPathOverride.isNotEmpty) {
+          pathSuffix = prodPathOverride.startsWith('/')
+              ? prodPathOverride
+              : '/$prodPathOverride';
+        } else {
+          pathSuffix = '/prod/api/test-scenarios-json';
+        }
+      }
+
+      final fullEndpoint = '$base$pathSuffix';
+      return fullEndpoint;
+    } catch (e) {
+      debugPrint('[FirebaseQueueService] Error obteniendo endpoint: $e');
+      return null;
     }
   }
 

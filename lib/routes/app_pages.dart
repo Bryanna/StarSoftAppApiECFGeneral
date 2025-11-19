@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import '../screens/home/home_binding.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/invoice_preview/invoice_preview_screen.dart';
+import '../screens/invoice_preview/portable_preview_screen.dart';
 import '../screens/login/login_binding.dart';
 import '../screens/login/login_screen.dart';
 import '../screens/register/register_binding.dart';
@@ -31,6 +32,10 @@ class AppPages {
     GetPage(
       name: AppRoutes.INVOICE_PREVIEW,
       page: () => const InvoicePreviewScreen(),
+    ),
+    GetPage(
+      name: AppRoutes.PORTABLE_PREVIEW,
+      page: () => const PortablePreviewScreen(),
     ),
     GetPage(
       name: AppRoutes.SPLASH,

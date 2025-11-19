@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
@@ -697,6 +698,7 @@ class QueueProcessorService {
 
       final companyData = companyDoc.data()!;
       final baseEndpointUrl = companyData['baseEndpointUrl'] as String?;
+      final envString = companyData['invoiceEnvironment'] as String?;
 
       if (baseEndpointUrl == null || baseEndpointUrl.isEmpty) {
         debugPrint(
@@ -705,9 +707,40 @@ class QueueProcessorService {
         return null;
       }
 
-      // Construir el endpoint completo
-      final fullEndpoint = '$baseEndpointUrl/test-scenarios-json';
-      debugPrint('[QueueProcessor] ✅ Endpoint obtenido: $fullEndpoint');
+      // Normalizar base y construir el endpoint respetando el ambiente
+      final base = baseEndpointUrl.replaceAll(RegExp(r'/+$'), '');
+
+      // Overrides opcionales desde Firestore
+      final testPathOverride = (companyData['dgiiTestPath'] as String?)?.trim();
+      final prodPathOverride = (companyData['dgiiProdPath'] as String?)?.trim();
+
+      final env = (envString ?? '').toLowerCase();
+      String pathSuffix;
+      if (env == 'test' || env == 'certificacion') {
+        if (testPathOverride != null && testPathOverride.isNotEmpty) {
+          pathSuffix = testPathOverride.startsWith('/')
+              ? testPathOverride
+              : '/$testPathOverride';
+        } else {
+          // Certificación: sin segmento env, Test: usar "/test/api/"
+          final envSegment = (env == 'certificacion') ? '' : '/test';
+          pathSuffix = '${envSegment}/api/test-scenarios-json';
+        }
+      } else {
+        // Producción
+        if (prodPathOverride != null && prodPathOverride.isNotEmpty) {
+          pathSuffix = prodPathOverride.startsWith('/')
+              ? prodPathOverride
+              : '/$prodPathOverride';
+        } else {
+          pathSuffix = '/prod/api/test-scenarios-json';
+        }
+      }
+
+      final fullEndpoint = '$base$pathSuffix';
+      debugPrint(
+        '[QueueProcessor] ✅ Endpoint obtenido (${envString ?? 'certificacion'}): $fullEndpoint',
+      );
 
       return fullEndpoint;
     } catch (e) {
@@ -745,9 +778,10 @@ class QueueProcessorService {
   // Extraer TipoeCF del NCF del ERP
   String _extractTipoeCF(Map<String, dynamic> invoiceData) {
     // Priorizar el tipoecf provisto por el ERP si existe
-    final providedTipo = (invoiceData['tipoecf'] ?? invoiceData['TipoeCF'] ?? '')
-        .toString()
-        .trim();
+    final providedTipo =
+        (invoiceData['tipoecf'] ?? invoiceData['TipoeCF'] ?? '')
+            .toString()
+            .trim();
     if (providedTipo.isNotEmpty) {
       debugPrint('[QueueProcessor] 📋 TipoeCF provisto por ERP: $providedTipo');
       return providedTipo;
@@ -773,7 +807,9 @@ class QueueProcessorService {
     }
 
     // Si no es electrónico y no se proporciona, no forzar conversión
-    debugPrint('[QueueProcessor] 📋 TipoeCF no disponible, sin conversión forzada');
+    debugPrint(
+      '[QueueProcessor] 📋 TipoeCF no disponible, sin conversión forzada',
+    );
     return '';
   }
 

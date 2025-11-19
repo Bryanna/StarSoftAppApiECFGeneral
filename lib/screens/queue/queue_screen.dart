@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'dart:convert';
 
 import '../../models/invoice_queue_item.dart';
 import '../../services/firebase_queue_service.dart';
@@ -299,6 +300,17 @@ class QueueScreen extends StatelessWidget {
                       ],
                     ),
                   ),
+                if (item.dgiiRequestData != null)
+                  const PopupMenuItem(
+                    value: 'view_request',
+                    child: Row(
+                      children: [
+                        Icon(Icons.article, size: 16),
+                        SizedBox(width: 8),
+                        Text('Ver Request'),
+                      ],
+                    ),
+                  ),
                 if ([
                   QueueStatus.pending,
                   QueueStatus.retrying,
@@ -338,6 +350,9 @@ class QueueScreen extends StatelessWidget {
         break;
       case 'view_response':
         _showResponseDialog(context, item);
+        break;
+      case 'view_request':
+        _showRequestDialog(context, item);
         break;
       case 'cancel':
         _showCancelDialog(context, item);
@@ -383,6 +398,11 @@ class QueueScreen extends StatelessWidget {
           ),
         ),
         actions: [
+          if (item.dgiiRequestData != null)
+            TextButton(
+              onPressed: () => _showRequestDialog(context, item),
+              child: const Text('Ver Request'),
+            ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Cerrar'),
@@ -420,6 +440,74 @@ class QueueScreen extends StatelessWidget {
           child: Text(
             item.dgiiResponse.toString(),
             style: const TextStyle(fontFamily: 'monospace'),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showRequestDialog(BuildContext context, InvoiceQueueItem item) {
+    final requestData = item.dgiiRequestData ?? {};
+    final endpoint = requestData['endpoint']?.toString();
+    String prettyJson;
+    try {
+      prettyJson = const JsonEncoder.withIndent('  ').convert(requestData);
+    } catch (_) {
+      prettyJson = requestData.toString();
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Request Enviado a DGII'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (endpoint != null && endpoint.isNotEmpty) ...[
+                Row(
+                  children: const [
+                    Icon(Icons.public, color: Colors.blueGrey),
+                    SizedBox(width: 8),
+                    Text(
+                      'Endpoint:',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  endpoint,
+                  style: const TextStyle(color: Colors.blueGrey),
+                ),
+                const Divider(height: 16),
+              ] else ...[
+                Row(
+                  children: const [
+                    Icon(Icons.info_outline, color: Colors.orange),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Endpoint no disponible en el request guardado.',
+                        style: TextStyle(color: Colors.orange),
+                      ),
+                    ),
+                  ],
+                ),
+                const Divider(height: 16),
+              ],
+              Text(
+                prettyJson,
+                style: const TextStyle(fontFamily: 'monospace'),
+              ),
+            ],
           ),
         ),
         actions: [
